@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="de" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Notizbuch Testumgebung</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+
+<!-- Kombinierte Topbar (Header + Menüband) -->
+<div class="topbar glass topbar-merged">
+  <!-- Zeile 1: Header -->
+  <div class="topbar-main">
+    <div class="left">
+      <!-- WICHTIG: id=backBtn (dein JS hört darauf) -->
+      <button id="backBtn" class="icon-btn pressable" title="Zurück zur Bucket Liste" aria-label="Zurück">
+        <!-- schlanker Pfeil nach links -->
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+       <h1>Notizbuch</h1>
+      <div class="topbar-subdivider-h"></div>
+<!-- (VERSCHOBEN) Ribbon-Controls folgen hier -->
+     <div class="ribbon-inner">
+      <div class="ribbon-group">
+        <label class="ff-label" for="ffSelect">Schriftart</label>
+        <select id="ffSelect" class="ff-select">
+          <option value="Calibri">Calibri</option>
+          <option value="Arial" selected>Arial</option>
+          <option value="Times New Roman">Times New Roman</option>
+          <option value="Consolas">Consolas</option>
+          <option value="Courier New">Courier New</option>
+          <option value="Verdana">Verdana</option>
+        </select>
+      </div>
+
+      <div class="ribbon-divider"></div>
+
+      <div class="ribbon-group">
+        <label class="ff-label" for="fsSelect">Größe</label>
+        <select id="fsSelect" class="ff-select">
+          <option value="10">10</option>
+          <option value="12">12</option>
+          <option value="14">14</option>
+          <option value="16">16</option>
+          <option value="18">18</option>
+          <option value="24">24</option>
+          <option value="32">32</option>
+          <option value="48">48</option>
+        </select>
+      </div>
+
+      <div class="ribbon-divider"></div>
+
+      <button id="btnBold"      class="rbtn" aria-pressed="false">F</button>
+      <button id="btnItalic"    class="rbtn" aria-pressed="false">K</button>
+      <button id="btnUnderline" class="rbtn" aria-pressed="false">U</button>
+    </div>
+
+    </div>
+
+    <div class="right">
+      <!-- WICHTIG: id=openSettingsTop (dein JS nutzt das) -->
+      <button id="openSettingsTop" class="icon-btn pressable" title="Einstellungen">⚙️</button>
+
+      <!-- WICHTIG: Notebook-eigene Backup/Restore-IDs -->
+      <button id="nbBackupBtn" class="icon-btn pressable" title="Backup">⬇️</button>
+
+      <!-- Restore über verstecktes File-Input -->
+      <label id="nbRestoreBtn" for="nbRestoreInput" class="icon-btn pressable" title="Restore">⬆️</label>
+      <input id="nbRestoreInput" type="file" accept="application/json" hidden>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+<!-- Layout: Links (Notizbücher+Abschnitte | Seiten) — Rechts (Editor) -->
+<div class="layout nb-layout">
+  <!-- Linke Spalte -->
+  <aside id="nbSplit" class="nb-split glass">
+    <!-- Notizbücher & Abschnitte -->
+    <div class="nb-left">
+      <div id="nbTree" class="list-col"></div>
+    </div>
+
+    <!-- Trenner -->
+    <div class="nb-sep" aria-hidden="true"></div>
+
+    <!-- Seiten -->
+    <div class="nb-right">
+      <div class="page-top">
+        <button id="addPageBtnSimple" class="pill-btn" type="button" title="Neue Seite anlegen">
+          <span>Neue Seite</span><span class="plus">+</span>
+        </button>
+      </div>
+      <div id="pageList" class="list-col"></div>
+    </div>
+  </aside>
+
+  <!-- Rechte Spalte: Editor -->
+  <main class="content nb-col">
+    <div class="editor-sheet">
+      <input id="pageTitle" class="editor-title" type="text" placeholder="Titel…" />
+
+      <div class="editor-meta">
+        <span id="pageDate"></span>
+      </div>
+
+      <div
+        id="pageContent"
+        class="editor-body"
+        contenteditable="true"
+        data-placeholder="Schreibe deine Notizen…"
+      ></div>
+    </div>
+
+    <p id="emptyState" class="hint">
+      Wähle links ein Notizbuch, einen Abschnitt und eine Seite – oder lege neue an.
+    </p>
+  </main>
+</div>
+
+
+  <!-- Einstellungen-Modal (re-used: Theme/Mode/Transparenzen) -->
+  <div id="settingsModal" class="modal" aria-hidden="true">
+    <div class="modal-backdrop"></div>
+    <div class="modal-dialog glass settings" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <form id="settingsForm">
+        <h2 id="settingsTitle">Einstellungen</h2>
+
+        <section class="settings-section">
+          <label class="label">Darstellung</label>
+          <div class="segmented" id="modeSegment">
+            <button type="button" class="seg-btn" data-mode="dark">Dunkel</button>
+            <button type="button" class="seg-btn" data-mode="light">Hell</button>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <label class="label">Fenster-Transparenz</label>
+          <div class="range-row">
+            <input id="opacityRange" type="range" min="0.30" max="0.95" step="0.01" />
+            <span id="opacityValue" class="range-value">0.75</span>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <label class="label">Karten-Transparenz</label>
+          <div class="range-row">
+            <input id="cardOpacityRange" type="range" min="0.30" max="0.98" step="0.01" />
+            <span id="cardOpacityValue" class="range-value">0.82</span>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <label class="label">Spaltenbreite (links)</label>
+          <div class="range-row">
+            <input id="sidebarWidthRange" type="range" min="360" max="700" step="2" />
+            <span id="sidebarWidthValue" class="range-value">520 px</span>
+          </div>
+          <p class="hint">Beim Ziehen wird das Einstellungsfenster ausgeblendet (Live-Vorschau).</p>
+        </section>
+
+
+        <section class="settings-section">
+          <label class="label">Farbschema</label>
+          <div id="themeGrid" class="theme-grid">
+            <button type="button" class="theme-swatch" data-theme="blue"><span></span>Blau</button>
+            <button type="button" class="theme-swatch" data-theme="pink"><span></span>Rosa</button>
+            <button type="button" class="theme-swatch" data-theme="yellow"><span></span>Gelb</button>
+            <button type="button" class="theme-swatch" data-theme="red"><span></span>Rot</button>
+            <button type="button" class="theme-swatch" data-theme="green"><span></span>Grün</button>
+            <button type="button" class="theme-swatch" data-theme="teal"><span></span>Türkis</button>
+            <button type="button" class="theme-swatch" data-theme="orange"><span></span>Orange</button>
+            <button type="button" class="theme-swatch" data-theme="violet"><span></span>Violett</button>
+            <button type="button" class="theme-swatch" data-theme="indigo"><span></span>Indigo</button>
+            <button type="button" class="theme-swatch" data-theme="lavender"><span></span>Lavendel</button>
+            <button type="button" class="theme-swatch" data-theme="mint"><span></span>Mint</button>
+            <button type="button" class="theme-swatch" data-theme="lime"><span></span>Lime</button>
+            <button type="button" class="theme-swatch" data-theme="amber"><span></span>Amber</button>
+            <button type="button" class="theme-swatch" data-theme="copper"><span></span>Kupfer</button>
+            <button type="button" class="theme-swatch" data-theme="coral"><span></span>Koralle</button>
+            <button type="button" class="theme-swatch" data-theme="fuchsia"><span></span>Fuchsia</button>
+            <button type="button" class="theme-swatch" data-theme="ocean"><span></span>Ocean</button>
+            <button type="button" class="theme-swatch" data-theme="forest"><span></span>Wald</button>
+            <button type="button" class="theme-swatch" data-theme="slate"><span></span>Schiefer</button>
+          </div>
+        </section>
+
+        <div class="modal-actions">
+          <button type="button" id="settingsCancel" class="btn btn-muted pressable">Schließen</button>
+          <button type="submit" class="btn btn-primary pressable">Speichern</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- Modal: Backup-Auswahl -->
+<div id="nbBackupModal" class="modal" aria-hidden="true">
+  <div class="modal-backdrop"></div>
+  <div class="modal-dialog glass" role="dialog" aria-modal="true" aria-labelledby="nbBackupTitle">
+    <form id="nbBackupForm">
+      <h2 id="nbBackupTitle">Was möchtest du sichern?</h2>
+
+      <div class="settings-section">
+        <label class="label">Bereich</label>
+        <div class="segmented" id="nbBackupSegment">
+          <label class="seg-btn active" data-type="notebook">
+            <input type="radio" name="backupType" value="notebook" checked hidden />
+            Notizbuch
+          </label>
+          <label class="seg-btn" data-type="bucket">
+            <input type="radio" name="backupType" value="bucket" hidden />
+            Bucket Liste
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" id="nbBackupCancel" class="btn btn-muted pressable">Abbrechen</button>
+        <button type="submit" id="nbBackupConfirm" class="btn btn-primary pressable">Backup herunterladen</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Überschreiben bestätigen -->
+<div id="nbConfirmModal" class="modal" aria-hidden="true">
+  <div class="modal-backdrop"></div>
+  <div class="modal-dialog glass" role="dialog" aria-modal="true" aria-labelledby="nbConfirmTitle">
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <h2 id="nbConfirmTitle">Daten überschreiben?</h2>
+      <p class="hint">
+        Das Wiederherstellen überschreibt die vorhandenen Daten im ausgewählten Bereich.
+        Möchtest du fortfahren?
+      </p>
+      <div class="modal-actions">
+        <button type="button" id="nbConfirmCancel" class="btn btn-muted pressable">Abbrechen</button>
+        <button type="button" id="nbConfirmOk" class="btn btn-primary pressable">Fortfahren</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Status/Erfolg -->
+<div id="nbStatusModal" class="modal" aria-hidden="true">
+  <div class="modal-backdrop"></div>
+  <div class="modal-dialog glass" role="dialog" aria-modal="true" aria-labelledby="nbStatusTitle">
+    <div class="status-wrap">
+      <div class="status-icon" aria-hidden="true">✔</div>
+      <div>
+        <h2 id="nbStatusTitle" class="status-title">Erfolgreich</h2>
+        <p id="nbStatusSubtitle" class="status-subtitle">Backup wurde erfolgreich geladen</p>
+      </div>
+    </div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button type="button" id="nbStatusOk" class="btn btn-primary pressable">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Löschen bestätigen (Notebook/Abschnitt/Seite) -->
+<div id="nbDeleteModal" class="modal" aria-hidden="true">
+  <div class="modal-backdrop"></div>
+  <div class="modal-dialog glass" role="dialog" aria-modal="true" aria-labelledby="nbDeleteTitle">
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      <h2 id="nbDeleteTitle">Wirklich löschen?</h2>
+      <p id="nbDeleteMsg" class="hint">Dieser Schritt kann nicht rückgängig gemacht werden.</p>
+
+      <label style="display:flex; align-items:center; gap:8px; margin-top:6px;">
+        <input id="nbDeleteNeverAsk" type="checkbox" />
+        Nicht mehr fragen
+      </label>
+
+      <div class="modal-actions" style="margin-top:10px;">
+        <button type="button" id="nbDeleteCancel" class="btn btn-muted pressable">Abbrechen</button>
+        <button type="button" id="nbDeleteOk" class="btn btn-primary pressable">Löschen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Verstecktes File-Input für Restore -->
+<input type="file" id="nbRestoreInput" accept="application/json" hidden />
+
+
+  <script src="notebook.js"></script>
+</body>
+</html>

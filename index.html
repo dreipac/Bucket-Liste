@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="de" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bucket Liste</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="icons/Bucket.png" type="image/png">
+</head>
+<body>
+  <header class="topbar glass">
+    <button class="icon-btn pressable" id="menuBtn" aria-label="Menü">
+      <span class="burger"></span>
+    </button>
+    <h1>Bucket Liste</h1>
+    <!-- Rechts: Settings in der Topbar -->
+    <div class="topbar-actions">
+      <button id="openSettingsTop" class="icon-btn pressable" title="Einstellungen"><img id="settings-icon" src="icons/settings.png"></button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar glass" id="sidebar">
+    <div class="list-add">
+      <button id="addListBtn" class="pill pill-primary pressable" title="Neue Liste erstellen">+ Neue Liste</button>
+    </div>
+
+
+
+      <nav id="lists" class="lists"></nav>
+    </aside>
+<div id="sidebarResizer" class="v-splitter" aria-hidden="true"></div>
+
+    <main class="content glass">
+      <div class="content-top">
+        <button id="addItemBtn" class="btn btn-primary pressable">
+          <span class="plus">+</span> Neuer Eintrag
+        </button>
+         <button id="clearArchiveBtn" class="btn btn-danger pressable" hidden>Archiv leeren</button>
+
+        <!-- Suche & Filter -->
+        <div class="filters">
+          <input id="searchInput" type="search" placeholder="Suchen (Titel/Notizen) …" />
+        <select id="sortBy" title="Sortierung">
+          <option value="none">Sortierung: Aus</option>
+          <option value="due">Fälligkeit</option>
+          <option value="status">Status</option>
+          <option value="prio">Priorität</option>
+          <option value="title">A–Z (Titel)</option>
+        </select>
+
+          <select id="statusFilter" title="Status">
+            <option value="all">Status: Alle</option>
+            <option value="open">Nur offen</option>
+            <option value="done">Nur erledigt</option>
+          </select>
+          <select id="dueFilter" title="Fälligkeit">
+            <option value="all">Fälligkeit: Alle</option>
+            <option value="today">Heute</option>
+            <option value="overdue">Überfällig</option>
+          </select>
+          <select id="prioFilter" title="Priorität">
+            <option value="all">Priorität: Alle</option>
+            <option value="low">Niedrig</option>
+            <option value="med">Mittel</option>
+            <option value="high">Dringend</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Fortschritt (bezieht sich auf sichtbare/ gefilterte Einträge) -->
+      <div class="progress-wrap">
+        <div class="progress"><div id="progressBar" class="progress-bar"></div></div>
+        <div id="progressText" class="progress-text">0 von 0 erledigt (0%)</div>
+      </div>
+
+      <ul id="items" class="items"></ul>
+      <p id="emptyText" class="empty">Aktuell sind keine Einträge vorhanden</p>
+    </main>
+  </div>
+
+  <!-- Drawer (Hamburger → von links) -->
+  <div id="drawer" class="drawer" aria-hidden="true">
+    <div class="drawer-backdrop"></div>
+    <aside class="drawer-panel">
+      <h3>Menü</h3>
+      <nav class="drawer-nav">
+        <button id="openSettings" class="drawer-link pressable">
+          <img id="settings-icon" src="icons/settings.png">
+          <span class="btn-drawer-text">Einstellungen</span>
+        </button>
+        <!-- Link zum Notizbuch -->
+        <button id="openNotebookBtn" class="drawer-link pressable" title="Notizbuch öffnen">
+          <img id="settings-icon" src="icons/notebook.png">
+          <span class="btn-drawer-text">Notizbuch</span>
+        </button>
+
+        <!-- Backup -->
+        <button id="backupBtn" class="drawer-link pressable" title="Daten sichern">
+          <img id="settings-icon" src="icons/backup.png">
+          <span class="btn-drawer-text">Backup sichern</span>
+        </button>
+
+        <!-- Restore -->
+        <label for="restoreInput" class="drawer-link pressable" title="Daten laden">
+          <img id="settings-icon" src="icons/load.png">
+          <span class="btn-drawer-text">Backup laden</span>
+          <input type="file" id="restoreInput" accept="application/json" hidden>
+        </label>
+      </nav>
+    </aside>
+  </div>
+
+  <!-- Templates -->
+<template id="listButtonTpl">
+  <div class="list-row" draggable="false">
+    <button class="list-btn pressable" draggable="false">
+      <span class="list-name"></span>
+    </button>
+    <div class="list-actions">
+      <button class="icon xsmall pressable" data-action="rename" title="Umbenennen">✎</button>
+      <button class="icon xsmall pressable" data-action="delete" title="Löschen">🗑</button>
+    </div>
+    <button class="drag-handle list" title="Ziehen zum Sortieren" aria-label="Ziehen zum Sortieren">⠿</button>
+  </div>
+</template>
+
+
+  <template id="itemTpl">
+    <li class="item card" draggable="false">
+      <label class="checkbox">
+        <input type="checkbox" />
+        <span class="checkmark"></span>
+      </label>
+
+      <div class="item-body">
+        <div class="row1">
+          <span class="title text"></span>
+          <span class="prio chip" hidden></span>
+          <span class="due chip" hidden></span>
+        </div>
+        <p class="notes" hidden></p>
+      </div>
+
+      <div class="item-actions">
+        <span class="repeat chip" hidden></span>
+        <button class="icon small pressable" data-action="edit" title="Bearbeiten">✎</button>
+        <button class="icon small pressable" data-action="delete" title="Löschen">🗑</button>
+      </div>
+
+      <button class="drag-handle" title="Zum Sortieren ziehen" aria-label="Ziehen zum Sortieren">⠿</button>
+    </li>
+  </template>
+
+  <!-- Modal: Eintrag -->
+  <div id="itemModal" class="modal" aria-hidden="true">
+    <div class="modal-backdrop"></div>
+    <div class="modal-dialog glass" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <form id="itemForm" autocomplete="off">
+        <h2 id="modalTitle">Neuer Eintrag</h2>
+
+        <label class="field">
+          <span class="label">Titel</span>
+          <input id="fTitle" type="text" placeholder="Titel…" required />
+        </label>
+
+        <section class="settings-section">
+          <label class="label">Priorität</label>
+          <div id="prioSegment" class="segmented prio-seg">
+            <button type="button" class="seg-btn" data-prio="low">Niedrig</button>
+            <button type="button" class="seg-btn" data-prio="med">Mittel</button>
+            <button type="button" class="seg-btn" data-prio="high">Dringend</button>
+          </div>
+        </section>
+
+        <div class="row">
+          <span class="label">Fällig bis</span>
+          <div class="row-inputs">
+            <input id="fDate" type="date" class="chip" />
+            <input id="fTime" type="time" class="chip" />
+          </div>
+        </div>
+        <section class="settings-section">
+  <label class="label">Wiederholen</label>
+  <div class="row repeat-row">
+    <select id="fRepeat" class="chip">
+      <option value="none">Nicht wiederholen</option>
+      <option value="daily">Täglich</option>
+      <option value="weekly">Wöchentlich</option>
+      <option value="monthly">Monatlich</option>
+    </select>
+
+    <select id="fRepeatEnd" class="chip">
+      <option value="never">Ohne Ende</option>
+      <option value="after">Nach Anzahl</option>
+      <option value="until">Bis Datum</option>
+    </select>
+
+    <input id="fRepeatCount" type="number" class="chip" min="1" step="1" placeholder="Anzahl" style="display:none;">
+    <input id="fRepeatUntil" type="date" class="chip" style="display:none;">
+  </div>
+</section>
+
+
+        <label class="field">
+          <span class="label">Notizen</span>
+          <textarea id="fNotes" rows="6" placeholder="Notizen…"></textarea>
+        </label>
+
+        <div class="modal-actions">
+          <button type="button" id="cancelBtn" class="btn btn-muted pressable">Abbrechen</button>
+          <button type="button" id="saveItemBtn" class="btn btn-primary pressable">Übernehmen</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Einstellungen -->
+  <div id="settingsModal" class="modal" aria-hidden="true">
+    <div class="modal-backdrop"></div>
+    <div class="modal-dialog glass settings" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <form id="settingsForm">
+        <h2 id="settingsTitle">Einstellungen</h2>
+
+        <section class="settings-section">
+        <label class="label">Darstellung</label>
+        <div id="modeSegment" class="segmented">
+          <button class="seg-btn" data-mode="light"  aria-pressed="false">Hell</button>
+          <button class="seg-btn" data-mode="dark"   aria-pressed="false">Dunkel</button>
+          <button class="seg-btn" data-mode="galaxy" aria-pressed="false">Galaxy Blue</button>
+        </div>
+        </section>
+
+ <div class="field">
+      <span class="label">Kartengröße</span>
+      <input id="cardScaleRange" type="range" min="0.85" max="1.35" step="0.01">
+      <span id="cardScaleValue" class="value"></span>
+    </div>
+
+        <div class="field">
+      <span class="label">Listenbreite</span>
+      <input id="sideWidthRange" type="range" min="220" max="520" step="2">
+      <span id="sideWidthValue" class="value"></span>
+    </div>
+
+    <div class="field">
+      <span class="label">Hintergrund</span>
+      <select id="bgSelect" class="chip" title="Hintergrund auswählen">
+        <option value="zurich">Zürich (Standard)</option>
+        <option value="geneva">Geneva</option>
+        <option value="zug">Zug</option>
+        <option value="prizren">Prizren (RKS)</option>
+        <option value="chur">Chur</option>
+        <option value="luzern">Luzern</option>
+        <option value="lugano">Lugano</option>
+      </select>
+    </div>
+
+
+  <label class="label">Layout</label>
+  <section class="settings-section">
+  <label class="label">Notizbuch öffnen</label>
+  <div class="segmented" id="openNotebookSegment">
+    <button type="button" class="seg-btn" data-open="same">Gleicher Tab</button>
+    <button type="button" class="seg-btn" data-open="new">Neuer Tab</button>
+  </div>
+</section>
+
+<!-- Button-Animation -->
+<div class="field">
+  <span class="label">Button-Animation (Tempo)</span>
+  <input id="pressSpeedRange" type="range" min="0.5" max="2" step="0.05">
+  <span id="pressSpeedValue" class="value"></span>
+</div>
+
+</section>
+
+
+        <section class="settings-section">
+          <label class="label">Farbschema</label>
+          <div id="themeGrid" class="theme-grid">
+            <button type="button" class="theme-swatch" data-theme="blue"><span></span>Blau</button>
+            <button type="button" class="theme-swatch" data-theme="pink"><span></span>Rosa</button>
+            <button type="button" class="theme-swatch" data-theme="yellow"><span></span>Gelb</button>
+            <button type="button" class="theme-swatch" data-theme="red"><span></span>Rot</button>
+            <button type="button" class="theme-swatch" data-theme="green"><span></span>Grün</button>
+            <button type="button" class="theme-swatch" data-theme="teal"><span></span>Türkis</button>
+            <button type="button" class="theme-swatch" data-theme="orange"><span></span>Orange</button>
+            <button type="button" class="theme-swatch" data-theme="violet"><span></span>Violett</button>
+            <button type="button" class="theme-swatch" data-theme="indigo"><span></span>Indigo</button>
+            <button type="button" class="theme-swatch" data-theme="lavender"><span></span>Lavendel</button>
+            <button type="button" class="theme-swatch" data-theme="mint"><span></span>Mint</button>
+            <button type="button" class="theme-swatch" data-theme="lime"><span></span>Lime</button>
+            <button type="button" class="theme-swatch" data-theme="amber"><span></span>Amber</button>
+            <button type="button" class="theme-swatch" data-theme="copper"><span></span>Kupfer</button>
+            <button type="button" class="theme-swatch" data-theme="coral"><span></span>Koralle</button>
+            <button type="button" class="theme-swatch" data-theme="fuchsia"><span></span>Fuchsia</button>
+            <button type="button" class="theme-swatch" data-theme="ocean"><span></span>Ocean</button>
+            <button type="button" class="theme-swatch" data-theme="forest"><span></span>Wald</button>
+            <button type="button" class="theme-swatch" data-theme="slate"><span></span>Schiefer</button>
+          </div>
+        </section>
+
+        <div class="modal-actions">
+          <button type="button" id="settingsCancel" class="btn btn-muted pressable">Schließen</button>
+          <button type="submit" class="btn btn-primary pressable">Speichern</button>
+        </div>
+      </form>
+    </div>
+<!-- Hintergrund-Modal -->
+<div id="backgroundModal" class="modal" aria-hidden="true">
+  <div class="modal-backdrop"></div>
+  <div class="modal-dialog glass" role="dialog" aria-modal="true" aria-labelledby="backgroundTitle">
+    <form id="backgroundForm">
+      <h2 id="backgroundTitle">Hintergrund wählen</h2>
+
+      <!-- Reuse deiner Grid/Kachel-Styles -->
+      <div class="theme-grid">
+        <label class="theme-swatch">
+          <input type="radio" name="bg" value="zurich" hidden>
+          Zürich (Standard)
+        </label>
+
+        <label class="theme-swatch">
+          <input type="radio" name="bg" value="geneva" hidden>
+          Geneva
+        </label>
+
+        <label class="theme-swatch">
+          <input type="radio" name="bg" value="luzern" hidden>
+          Luzern
+        </label>
+
+        <label class="theme-swatch">
+          <input type="radio" name="bg" value="lugano" hidden>
+          Lugano
+        </label>
+
+        <label class="theme-swatch">
+          <input type="radio" name="bg" value="zug" hidden>
+          Zug
+        </label>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:16px;">
+        <button type="submit" class="btn btn-primary pressable" id="backgroundApply">Übernehmen</button>
+        <button type="button" class="btn pressable" id="backgroundCancel">Abbrechen</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+  </div>
+
+  <!-- Modal: Archiv leeren -->
+<div id="clearArchiveModal" class="modal" aria-hidden="true">
+  <div class="modal-backdrop"></div>
+  <div class="modal-dialog glass" role="dialog" aria-modal="true" aria-labelledby="clearArchiveTitle">
+    <div class="modal-content">
+      <h2 id="clearArchiveTitle">Archiv leeren?</h2>
+      <p>Alle archivierten Einträge werden dauerhaft entfernt. Bist du sicher?</p>
+      <div class="modal-actions">
+        <button type="button" id="clearArchiveCancel" class="btn btn-muted pressable">Abbrechen</button>
+        <button type="button" id="clearArchiveConfirm" class="btn btn-danger pressable">Archiv leeren</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Galaxy starfield canvas (nur im Modus 'galaxy' sichtbar) -->
+<canvas id="galaxyCanvas" aria-hidden="true"></canvas>
+
+  <!-- Toasts root (oben rechts) -->
+<div id="toast-root" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
