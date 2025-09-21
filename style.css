@@ -31,7 +31,7 @@ html, body { height: 100%; }
 html, body { height: 100%; }
 html{
   /* scrollbar bleibt reserviert -> kein Layout-Shift */
-  scrollbar-gutter: stable both-edges;
+  scrollbar-gutter: auto;
   overscroll-behavior: none;   /* kein „Gummiband“/Scroll-Chaining */
 }
 body{
@@ -63,12 +63,15 @@ body{
   background: var(--bg);
 }
 body::before{
-  content:""; position:fixed; inset:0; z-index:-1;
+  content:""; position:fixed; inset:-1px; z-index:-2;
   background:
     radial-gradient(60% 80% at 10% 0%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 60%),
     radial-gradient(80% 60% at 100% 100%, color-mix(in srgb, var(--accent-2) 30%, transparent), transparent 60%),
     linear-gradient(rgba(10,12,15, var(--overlay-dark)), rgba(10,12,15, var(--overlay-dark))),
-    var(--bg-url, url("background/zurich.png")) center/cover no-repeat fixed;
+    var(--bg-url, url("background/zurich.png")) center/cover no-repeat;
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: cover;
 
   filter: saturate(1.05);
 }
@@ -77,7 +80,7 @@ html[data-theme="light"] body::before{
     radial-gradient(60% 80% at 10% 0%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 60%),
     radial-gradient(80% 60% at 100% 100%, color-mix(in srgb, var(--accent-2) 18%, transparent), transparent 60%),
     linear-gradient(rgba(255,255,255, var(--overlay-light)), rgba(255,255,255, var(--overlay-light))),
-    var(--bg-url, url("background/zurich.png")) center/cover no-repeat fixed;
+    var(--bg-url, url("background/zurich.png")) center/cover no-repeat;
 
 }
 
@@ -103,12 +106,15 @@ html[data-theme="galaxy"] body{
 /* ==== Galaxy Canvas Overlay ==== */
 #galaxyCanvas{
   position: fixed;
-  inset: 0;
-  z-index: -1;              /* unter dem UI, über dem Body-Bg */
+  inset: -1px;
+  width: calc(100vw + 2px);
+  height: calc(100vh + 2px);
+  z-index: -1;
   pointer-events: none;
-  opacity: 0;               /* nur im Galaxy-Modus sichtbar */
+  opacity: 0;
   transition: opacity .4s ease;
 }
+
 html[data-theme="galaxy"] #galaxyCanvas{ opacity: 1; }
 
 
@@ -1849,7 +1855,7 @@ html[data-theme="light"] #renameInput{ border-bottom-color:#c2c9d6; }
   transform: translateY(0) scale(.965);
   box-shadow: 0 8px 22px rgba(0,0,0,.30);
 }
-
+#filtersToggleBtn { display: none; }
 /* === Danger Button (Archiv leeren) === */
 .btn.btn-danger{
   background: linear-gradient(180deg, #e63946, #b92d38);
@@ -1877,9 +1883,108 @@ html[data-theme="light"] #renameInput{ border-bottom-color:#c2c9d6; }
   transform: scale(.96);
   box-shadow: 0 6px 18px rgba(185,45,56,.55);
 }
-
+.fs-menu { z-index: 4000; }
 /* === Mobile Layout (<= 820px) ========================================== */
 @media (max-width: 820px){
+
+input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+
+
+ /* Content: transparent – alles sitzt direkt auf dem Hintergrundbild */
+  .content{
+    background: transparent !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    padding: 12px;                 /* kompakt */
+    overflow: visible;
+  }
+
+  /* Topbar hatten wir bereits auf transparent/fixed gestellt – passt zu diesem Look */
+
+  /* Top-Zeile als 2-Säulen-Grid:
+     - Neuer Eintrag nimmt fast volle Breite
+     - kleiner Filter-Button rechts daneben */
+  .content-top{
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-auto-rows: min-content;
+    gap: 8px;
+    margin-bottom: 10px;
+    z-index: 1 !important;
+    overflow: visible !important;
+  }
+
+
+  
+  /* Großer CTA fast volle Breite */
+  #addItemBtn{
+    grid-column: 1 / 2;
+    width: 100%;
+    justify-self: stretch;
+  }
+
+  /* Kleiner Filter-Button rechts */
+  #filtersToggleBtn { display: grid; }
+  html[data-theme="light"] #filtersToggleBtn{
+    background: rgba(255,255,255,.65);
+  }
+
+  /* Suche direkt UNTER der Top-Zeile – volle Breite */
+  #searchInput{
+    grid-column: 1 / -1;       /* volle Breite */
+    width: 100%;
+    min-height: 42px;
+    order: 2;                  /* sicher unter den Buttons */
+  }
+
+    .content.glass {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important; /* für iOS Safari */
+    background: transparent !important;       /* Hintergrund direkt sichtbar */
+    box-shadow: none !important;
+    border: 0 !important;
+  }
+
+  /* Fortschrittszeile direkt unter der Suche */
+  .progress-wrap{
+    grid-column: 1 / -1;
+    order: 3;
+    margin: 6px 0 8px;
+  }
+
+  /* Das eigentliche Dropdown-Panel */
+  .filters .fs-menu,
+  .filters select,
+  .filters .fs-btn {
+    /* verhindert Layout-Sprünge, weil wir gleich Panel-Style setzen */
+  }
+.filters .fs-menu{ z-index: 5000; } 
+ .filters.open{
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    /* fixe Obergrenze; wird von JS beim Öffnen dynamisch gesetzt,
+       falls du „echte“ auto-Höhe willst */
+    max-height: 240px;
+    pointer-events: auto;
+  }
+
+
+  /* Im Panel: Suche soll NICHT drin sein (die steht ja oben vollbreit).
+     Wir blenden die Suche in der .filters-Gruppe aus, falls dort vorhanden. */
+  .filters #searchInput{
+    display: none !important;
+  }
+
+  /* Selects im Panel hübsch anordnen */
+  .filters select{
+    width: 100%;
+    min-height: 36px;
+  }
+
 
  /* Original-Element beim Drag sichtbar lassen */
   .item.dragging,
@@ -1905,13 +2010,14 @@ html[data-theme="light"] #renameInput{ border-bottom-color:#c2c9d6; }
     opacity: 1 !important;
     transition: none !important;
   }
-
   
   /* Layout stapeln */
   .layout{
     grid-template-columns: 1fr;
     gap: 12px;
     padding: 0 10px 12px;
+    margin-top: var(--topbar-h, 64px);
+    overflow: visible !important;
   }
 
   /* Sidebar als Off-Canvas */
@@ -1956,10 +2062,31 @@ html[data-theme="light"] #renameInput{ border-bottom-color:#c2c9d6; }
   }
 
   .filters{
-    width: 100%;
-    margin-left: 0;
-    flex-wrap: wrap;
+    /* statt display:none -> immer vorhanden, aber eingeklappt */
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* zwei Spalten für Selects */
     gap: 8px;
+    background: transparent ;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: blur(10px);
+    border: 0 ;
+    border-radius: 14px;
+    box-shadow: none;
+    margin-bottom: 8px;
+     position: relative;
+     z-index: 3000;
+     backdrop-filter: none;
+    opacity: 0;
+    transform: translateY(-6px) scale(.98);
+    max-height: 0;
+    overflow: hidden;
+    pointer-events: none;
+
+    /* Animationen */
+    transition:
+      opacity .22s cubic-bezier(.22,1,.36,1),
+      transform .22s cubic-bezier(.22,1,.36,1),
+      max-height .28s cubic-bezier(.22,1,.36,1);
   }
   .filters input[type="search"]{
     flex: 1 1 100%;
@@ -1971,23 +2098,62 @@ html[data-theme="light"] #renameInput{ border-bottom-color:#c2c9d6; }
   }
 
   /* Item-Karten etwas dichter, bessere Touch-Ziele */
-  .item{
-    grid-template-columns: 32px 1fr auto;
-    gap: 10px;
-    padding: 12px;
-    border-radius: 22px;
+    .item{
+    grid-template-columns: 28px 1fr auto; /* Checkbox kleiner */
+    gap: 8px;
+    padding: 10px 12px;                   /* weniger Innenabstand */
+    border-radius: 18px;                  /* kompaktere Ecken */
+    font-size: 0.9rem;                    /* Text etwas kleiner */
   }
   .item .row1{ gap: 8px; }
   .icon.small{ padding: 10px 12px; }
 
+    .item .title{
+    font-size: 14px;                      /* Titel kleiner */
+  }
+
+  .item .notes{
+    font-size: 13px;                      /* Notizen kleiner */
+    -webkit-line-clamp: 1;                /* max. 1 Zeile anzeigen */
+  }
+
+  .chip{
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+ .drag-handle,
+  .drag-handle.list{
+    cursor: grab;
+  }
+  .icon.small{
+    padding: 8px 10px;                    /* kompaktere Buttons */
+  }
+  
   /* Fortschrittszeile: übereinander */
   .progress-wrap{
     grid-template-columns: 1fr;
     gap: 8px;
   }
 
-  /* Topbar: etwas kompakter */
-  .topbar{ margin: 10px; padding: 8px 12px; }
+  .modal .modal-dialog{
+    width: min(92vw, 760px);
+    padding: 16px;
+  }
+
+  
+.topbar{
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    margin: 0;
+    border-radius: 0;
+    background: transparent;   /* Hintergrund weg */
+    box-shadow: none;          /* Schatten entfernen */
+    backdrop-filter: none;     /* Glas-Effekt deaktivieren */
+    z-index: 100;
+    padding: 10px 14px;
+  }
   .topbar h1{ font-size: 18px; }
 }
 
@@ -2038,14 +2204,6 @@ html[data-theme="light"] #renameInput{ border-bottom-color:#c2c9d6; }
   overflow: hidden;
 }
 
-/* Optional: auf sehr kleinen Screens etwas kompaktere Ränder */
-@media (max-width: 820px){
-  .modal .modal-dialog{
-    width: min(92vw, 760px);
-    padding: 16px;
-  }
-}
-
 /* Schwebendes Element beim Touch-Drag */
 .drag-ghost{
   position: fixed;
@@ -2064,10 +2222,77 @@ body.dragging-touch{
   overscroll-behavior: contain;
 }
 
-/* Mobile: Griffe klar als greifbar */
-@media (max-width: 820px){
-  .drag-handle,
-  .drag-handle.list{
-    cursor: grab;
-  }
+/* === Quick-Add Bottom Sheet ========================================== */
+.sheet{ position: fixed; inset: 0; z-index: 9998; display: none; }
+.sheet[hidden]{ display: none !important; }
+.sheet.open{ display: block; }
+
+.sheet-backdrop{
+  position:absolute; inset:0;
+  background: rgba(0,0,0,.45);
+  opacity: 0;
+  transition: opacity var(--press-dur) cubic-bezier(.22,1,.36,1);
+}
+
+.sheet-panel{
+  position:absolute; left:0; right:0; bottom:0;
+  border-radius: 18px 18px 0 0;
+  backdrop-filter: blur(10px);
+  transform: translateY(100%);
+  transition: transform var(--press-dur) cubic-bezier(.22,1,.36,1);
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  box-shadow: 0 -12px 36px rgba(0,0,0,.35);
+}
+
+.sheet.open .sheet-backdrop{ opacity: 1; }
+.sheet.open .sheet-panel{ transform: translateY(0%); }
+
+.sheet-bar{
+  display:flex; align-items:center; gap:10px;
+  padding: 4px 2px 8px;
+}
+.sheet-bar .link{
+  background: transparent; border: 0; color: var(--ink); cursor: pointer; font-weight: 700;
+}
+html[data-theme="light"] .sheet-bar .link{ color: #0b1220; }
+
+.sheet-title{
+  margin-left: auto; margin-right: auto;
+  font-weight: 700; opacity: .9;
+}
+#qaDone{ margin-left: auto; }
+
+/* Eingabe */
+.sheet-body{
+  padding: 6px 2px 4px;
+}
+#qaInput{
+  width: 100%;
+  border: 0;
+  outline: none;
+  border-bottom: 2px solid color-mix(in srgb, var(--ink) 25%, transparent);
+  background: transparent;
+  color: var(--ink);
+  font: 16px/1.3 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  padding: 12px 4px 10px;
+}
+#qaInput:focus{
+  border-bottom-color: var(--accent);
+}
+html[data-theme="light"] #qaInput{
+  color: #0b1220;
+  border-bottom-color: rgba(0,0,0,.18);
+}
+
+/* Swipe-Handle (unsichtbar – mehr Touch-Fläche) */
+#qaPanel::before{
+  content:"";
+  position:absolute; left:50%; transform: translateX(-50%);
+  top:6px; width: 38px; height:4px; border-radius:999px;
+  background: color-mix(in srgb, var(--ink) 22%, transparent);
+}
+
+/* Nur auf Mobile sichtbar */
+@media (min-width: 821px){
+  .sheet{ display: none !important; }
 }
