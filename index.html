@@ -2,7 +2,7 @@
 <html lang="de" data-theme="dark">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
   <title>Bucket Liste</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="icon" href="icons/Bucket.png" type="image/png">
@@ -36,6 +36,15 @@
         <button id="addItemBtn" class="btn btn-primary pressable">
           <span class="plus">+</span> Neuer Eintrag
         </button>
+
+         <!-- NEU: kompakter Filter-Button (öffnet Dropdown auf Mobile) -->
+  <button id="filtersToggleBtn" class="icon-btn pressable" title="Filter & Sortierung">
+    <!-- ein simples Trichter-Icon (oder ersetze durch dein eigenes) -->
+    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2">
+      <path d="M3 4h18l-7 8v6l-4 2v-8L3 4z"/>
+    </svg>
+  </button>
+
          <button id="clearArchiveBtn" class="btn btn-danger pressable" hidden>Archiv leeren</button>
 
         <!-- Suche & Filter -->
@@ -367,6 +376,23 @@
     </div>
   </div>
 </div>
+
+<!-- === Quick-Add Bottom Sheet (nur Mobile) === -->
+<div id="quickAdd" class="sheet" role="dialog" aria-modal="true" aria-labelledby="qaTitle" hidden>
+  <div class="sheet-backdrop" data-qa-close=""></div>
+  <div class="sheet-panel glass" id="qaPanel" tabindex="-1">
+    <div class="sheet-bar">
+      <button type="button" class="link" id="qaDetails">Details</button>
+      <div class="sheet-title" id="qaTitle">Schnell hinzufügen</div>
+      <button type="button" class="btn btn-primary pressable" id="qaDone" disabled>Fertig</button>
+    </div>
+    <div class="sheet-body">
+      <input id="qaInput" type="text" inputmode="text" autocomplete="off" spellcheck="false"
+             placeholder="Titel eingeben…" maxlength="200" />
+    </div>
+  </div>
+</div>
+
 
 <!-- Galaxy starfield canvas (nur im Modus 'galaxy' sichtbar) -->
 <canvas id="galaxyCanvas" aria-hidden="true"></canvas>
