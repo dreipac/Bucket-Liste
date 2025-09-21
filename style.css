@@ -1,0 +1,2299 @@
+/* ---------- Base & Variables ---------- */
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+
+:root{
+  --kb-safe: 0px;
+  --glass-rgb: 22 24 28;
+  --glass-alpha: .58;
+  --glass-strong-alpha: .75;
+  --card-alpha: .82;
+
+  --accent: #22b0ff;
+  --accent-2: #7c4dff;
+
+  --ink: #e9eef6;
+  --ink-strong: #fff;
+  --ink-inverse: #0b1220;
+  --muted: #b9c0c9;
+
+  --success: #2ecc71;
+  --danger: #ff6b6b;
+
+  --radius: 18px;
+  --shadow: 0 12px 36px rgba(0,0,0,.4);
+
+  --bg: #101317;
+  --overlay-dark: .55;
+  --overlay-light: .18;
+}
+
+/* === App-Viewport & Scroll-Lock ==================================== */
+html, body { height: 100%; }
+html{
+  /* scrollbar bleibt reserviert -> kein Layout-Shift */
+  scrollbar-gutter: auto;
+  overscroll-behavior: none;   /* kein „Gummiband“/Scroll-Chaining */
+}
+body{
+  overflow: hidden;            /* Seite selbst scrollt NIE */
+  touch-action: manipulation;
+}
+
+/* dynamische Höhe: wird per JS gesetzt (siehe --vh / --app-h) */
+:root{
+  --vh: 1vh;
+  --app-h: calc(var(--vh) * 100);
+  --topbar-h: 64px;            /* wird per JS genauer gesetzt */
+}
+
+
+/* Dark/Light */
+html[data-theme="dark"]{
+  --glass-rgb: 22 24 28;
+  --ink: #e9eef6; --ink-strong:#fff; --ink-inverse:#0b1220; --bg:#101317;
+}
+html[data-theme="light"]{
+  --glass-rgb: 255 255 255;
+  --ink: #0b1220; --ink-strong:#0b1220; --ink-inverse:#e9eef6; --bg:#f6f8fb;
+}
+
+body{
+  margin: 0; color: var(--ink);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: var(--bg);
+}
+body::before{
+  content:""; position:fixed; inset:-1px; z-index:-2;
+  background:
+    radial-gradient(60% 80% at 10% 0%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 60%),
+    radial-gradient(80% 60% at 100% 100%, color-mix(in srgb, var(--accent-2) 30%, transparent), transparent 60%),
+    linear-gradient(rgba(10,12,15, var(--overlay-dark)), rgba(10,12,15, var(--overlay-dark))),
+    var(--bg-url, url("background/zurich.png")) center/cover no-repeat;
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: cover;
+
+  filter: saturate(1.05);
+}
+html[data-theme="light"] body::before{
+  background:
+    radial-gradient(60% 80% at 10% 0%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 60%),
+    radial-gradient(80% 60% at 100% 100%, color-mix(in srgb, var(--accent-2) 18%, transparent), transparent 60%),
+    linear-gradient(rgba(255,255,255, var(--overlay-light)), rgba(255,255,255, var(--overlay-light))),
+    var(--bg-url, url("background/zurich.png")) center/cover no-repeat;
+
+}
+
+/* ==== Galaxy Blue Theme ==== */
+html[data-theme="galaxy"]{
+  /* Snapchat-Plus-Blau als Akzent */
+  --accent: #0EA5FF;          /* primäres Blau */
+  --accent-ink: #ffffff;      /* Text auf Akzent */
+  --ink: #E7F6FF;             /* Primärtext */
+  --ink-dim: #B6E1FF;         /* gedimmter Text */
+  --surface: rgba(8,16,28,0.55);
+  --glass-rgb: 10 30 60;      /* Glass-Look Blau */
+  --card: rgba(10, 22, 45, 0.55);
+  --border: rgba(14,165,255,0.22);
+  background-color: #050A14;
+}
+
+/* sanfter Nebula-Glow über dem Hintergrundbild (durch Canvas ergänzt) */
+html[data-theme="galaxy"] body{
+  background-blend-mode: overlay;
+}
+
+/* ==== Galaxy Canvas Overlay ==== */
+#galaxyCanvas{
+  position: fixed;
+  inset: -1px;
+  width: calc(100vw + 2px);
+  height: calc(100vh + 2px);
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .4s ease;
+}
+
+html[data-theme="galaxy"] #galaxyCanvas{ opacity: 1; }
+
+
+.glass{ background: rgb(var(--glass-rgb) / var(--glass-strong-alpha)); backdrop-filter: blur(10px); box-shadow: var(--shadow); border-radius: var(--radius); }
+
+/* ---------- Topbar ---------- */
+.topbar{ display:flex; align-items:center; gap:12px; padding:10px 16px; margin:18px; }
+.topbar h1{ font-size:22px; margin:0; }
+.topbar .topbar-actions{ margin-left:auto; display:flex; align-items:center; gap:10px; }
+.icon-btn{ width:40px;height:40px;border-radius:12px;border:0;cursor:pointer;background:#3a3d42;color:#fff;display:grid;place-items:center; }
+html[data-theme="light"] .icon-btn{ background:#e1e5ec; color:#0b1220; }
+.burger, .burger::before, .burger::after{ content:""; display:block; width:18px; height:2px; background:currentColor; border-radius:2px; position:relative; }
+.burger::before{ position:absolute; transform: translateY(-6px); }
+.burger::after{ position:absolute; transform: translateY(6px); }
+
+/* ---------- Layout ---------- */
+.layout{ 
+  height: calc(var(--app-h) - var(--topbar-h) - 36px); /* 36px = Topbar-Margins (18 oben + 18 unten) */
+  overflow: hidden;
+  display:grid; grid-template-columns:auto 1fr; gap:18px; padding:0 18px 18px; }
+.sidebar{ padding:16px; min-height:calc(100vh - 140px); overflow: auto;}
+.content{ padding:18px; min-height:calc(100vh - 140px); background: rgb(var(--glass-rgb) / var(--glass-alpha)); border-radius: var(--radius); box-shadow: var(--shadow); overflow: auto;}
+
+/* ---------- Add list ---------- */
+.list-add{ display:flex; gap:10px; align-items:center; margin-bottom:14px; }
+.list-add input{ flex:1; padding:12px 14px; border-radius:14px; border:0; background:#2b2f35; color:#fff; outline:none; }
+html[data-theme="light"] .list-add input{ background:#eef1f6; color:#0b1220; }
+.pill{ border-radius:14px; padding:10px 14px; border:0; cursor:pointer; font-weight:700; }
+.pill-primary{ background: var(--accent); color: var(--ink-inverse); }
+
+/* ---------- Lists ---------- */
+.lists{ display:flex; flex-direction:column; gap:10px; margin-top:10px;}
+.list-row{ display:grid; grid-template-columns: 1fr auto 28px; align-items:center; gap:8px; }
+.list-btn{
+  width:100%; text-align:left; border:0; cursor:pointer; padding:14px 16px; border-radius:16px;
+  color:var(--ink); background:#1b1f25; transition: transform .06s ease, background .2s ease, outline .2s; border:1px solid rgba(255,255,255,.05);
+}
+.list-btn:hover{ background:#262b33; }
+.list-btn.active{
+  background:#0e1117;
+  outline:2px solid transparent;
+  background-image: linear-gradient(#0e1117,#0e1117), linear-gradient(135deg, var(--accent), var(--accent-2));
+  background-origin:border-box; background-clip: padding-box, border-box;
+}
+html[data-theme="light"] .list-btn{ background:#f1f4f9; color:#0b1220; border-color: rgba(0,0,0,.06); }
+html[data-theme="light"] .list-btn:hover{ background:#e8ecf5; }
+html[data-theme="light"] .list-btn.active{ background:#fff; }
+
+.list-actions{ display:flex; gap:6px; opacity:0; transition:opacity .15s ease; }
+.list-row:hover .list-actions{ opacity:1; }
+.icon.xsmall{ background:#2b2f35; color:#fff; border:0; border-radius:10px; padding:6px 8px; cursor:pointer; }
+.icon.xsmall:hover{ background:#373d45; }
+html[data-theme="light"] .icon.xsmall{ background:#e1e6ee; color:#0b1220; }
+html[data-theme="light"] .icon.xsmall:hover{ background:#d6dde9; }
+
+.drag-handle.list{ background: transparent; color:#c9d2dc; border:0; cursor: grab; font-size:18px; line-height:1; padding:2px 0 0; user-select:none; }
+.drag-handle.list:active{ cursor: grabbing; }
+html[data-theme="light"] .drag-handle.list{ color:#536072; }
+
+.list-row.dragging{ opacity:.7; transform: scale(.98); }
+.list-drop-marker{ height:8px; margin:4px 0; border-radius:999px; background: linear-gradient(90deg,var(--accent),var(--accent-2)); }
+.list-row.drop-target .list-btn{ outline:2px dashed var(--accent); }
+
+/* ---------- Buttons "pop" (mit variabler Dauer) ---------- */
+:root{
+  /* Basisdauer für Button-Press-Animation – wird von JS überschrieben */
+  --press-dur: 220ms;
+}
+
+.pressable{
+  will-change: transform, filter;
+  transition:
+    transform var(--press-dur) cubic-bezier(.22,1,.36,1),
+    filter    var(--press-dur) ease,
+    box-shadow var(--press-dur) ease;
+}
+
+/* Bounce nach dem Loslassen: leicht über 1 skalieren, dann auf 1 zurück */
+.pressable.pop{
+  animation: press-pop var(--press-dur) ease-out;
+}
+@keyframes press-pop{
+  0%   { transform: scale(.965); }
+  60%  { transform: scale(1.035); }
+  100% { transform: scale(1); }
+}
+
+/* ---------- Content Top (Filters) ---------- */
+.content-top{ display:flex; align-items:center; gap:12px; margin-bottom:14px; flex-wrap: wrap; }
+.filters{ display:flex; align-items:center; gap:8px; margin-left:auto; }
+.filters input[type="search"], .filters select{
+  background:#1b1f25; color:var(--ink); border:1px solid rgba(255,255,255,.08);
+  border-radius:12px; padding:10px 12px; outline:none; min-height:40px;
+}
+html[data-theme="light"] .filters input[type="search"], html[data-theme="light"] .filters select{
+  background:#f1f4f9; color:#0b1220; border-color: rgba(0,0,0,.06);
+}
+
+/* ---------- Progress + smooth ---------- */
+.progress-wrap{ display:grid; grid-template-columns: 1fr auto; align-items:center; gap:12px; margin: 6px 0 12px; }
+.progress{ height:10px; border-radius:999px; background: rgb(var(--glass-rgb) / .35); overflow:hidden; }
+.progress-bar{
+  height:100%; width:0%;
+  transition: width 500ms cubic-bezier(.22,1,.36,1), background-position 800ms linear;
+  will-change: width, background-position;
+  background-image:
+    linear-gradient(90deg, var(--accent), var(--accent-2)),
+    repeating-linear-gradient(-45deg, rgba(255,255,255,.18) 0 10px, rgba(255,255,255,0) 10px 20px);
+  background-size: 200% 100%, 18px 18px; background-position: 0 0, 0 0;
+}
+.progress-bar.moving{ background-position: 100% 0, 40px 0; }
+.progress-text{ font-size:13px; color: var(--muted); }
+
+/* ---------- Items ---------- */
+.items{ list-style:none; margin:10px 0 0; padding:0; display:flex; flex-direction:column; gap:12px; }
+.items.drag-active{ outline:2px dashed var(--accent); outline-offset:6px; border-radius:16px; }
+
+.card{
+  position:relative; border-radius:28px; border:1px solid transparent;
+  background:
+    linear-gradient(rgb(var(--glass-rgb) / var(--card-alpha)), rgb(var(--glass-rgb) / var(--card-alpha))) padding-box,
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 55%, transparent), color-mix(in srgb, var(--accent-2) 55%, transparent)) border-box;
+}
+
+.item{
+  display:grid; grid-template-columns:36px 1fr auto 28px; align-items:flex-start; gap:12px; padding:14px;
+  transform-origin: 50% 0%;
+}
+.item.anim-in{ animation:itemIn .18s ease-out both; }
+.item.anim-out{ animation:itemOut .16s ease-in forwards; }
+@keyframes itemIn{ 0%{ opacity:0; transform: scale(.94); } 70%{ opacity:1; transform: scale(1.02); } 100%{ opacity:1; transform: scale(1); } }
+@keyframes itemOut{ from{ opacity:1; transform: scale(1); } to{ opacity:0; transform: scale(.85); } }
+
+.item .row1{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.item .title{ font-size:16px; font-weight:700; }
+.item .notes{ color:#cdd3db; opacity:.9; margin:6px 0 0; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+html[data-theme="light"] .item .notes{ color:#425162; }
+.item.done .title{ text-decoration: line-through; color: #9aa3ad; opacity:.9; }
+.item.done{ opacity:.85; }
+
+.checkbox{ position:relative; width:22px; height:22px; display:grid; place-items:center; margin-top:2px; }
+.checkbox input{ opacity:0; width:22px; height:22px; margin:0; cursor:pointer; position:absolute; }
+.checkbox .checkmark{ width:18px; height:18px; border-radius:6px; border:2px solid #758192; display:block; transition:.15s ease; }
+.item input:checked + .checkmark{ background: var(--success); border-color: var(--success); }
+html[data-theme="light"] .checkbox .checkmark{ border-color:#9aa6b5; }
+
+.chip{ display:inline-flex; align-items:center; gap:6px; background:#26303a; color:#d8e2ee; border-radius:999px; padding:6px 10px; font-size:12px; border:1px solid rgba(255,255,255,.08); }
+html[data-theme="light"] .chip{ background:#e8eef6; color:#0b1220; border-color: rgba(0,0,0,.06); }
+.chip.overdue{ color:#fff; background:#3b2227; border-color:#542d33; }
+.chip.done{ background:#22352a; color:#aaf0c8; }
+
+/* Prioritäts-Badges */
+.prio.low{ background:#1e2d24; color:#baf2cf; border-color:#254934; }
+.prio.med{ background:#2a2733; color:#e6d6ff; border-color:#3b3550; }
+.prio.high{ background:#3b2227; color:#ffd4d4; border-color:#5a2e35; }
+html[data-theme="light"] .prio.low{ background:#e8f7ef; color:#134d2a; border-color:#cdeede; }
+html[data-theme="light"] .prio.med{ background:#efe9ff; color:#3d2b6b; border-color:#e3d9ff; }
+html[data-theme="light"] .prio.high{ background:#ffe9ea; color:#7a1e2a; border-color:#ffd3d6; }
+
+.item-actions{ display:flex; gap:6px; }
+.icon.small{ background:#2b2f35; color:#fff; border:0; border-radius:12px; padding:8px 10px; cursor:pointer; transition: background .15s ease, transform .05s ease; }
+.icon.small:hover{ background:#353a41; }
+.icon.small:active{ transform: translateY(1px); }
+.icon.small[data-action="delete"]:hover{ background:#3b2227; color:#ffb0b0; }
+html[data-theme="light"] .icon.small{ background:#e1e6ee; color:#0b1220; }
+html[data-theme="light"] .icon.small:hover{ background:#d6dde9; }
+html[data-theme="light"] .icon.small[data-action="delete"]:hover{ background:#ffe3e3; color:#8b0000; }
+
+.drag-handle{ background: transparent; color:#c9d2dc; border:0; cursor: grab; font-size:18px; line-height:1; padding:2px 0 0; user-select:none; }
+.drag-handle:active{ cursor: grabbing; }
+html[data-theme="light"] .drag-handle{ color:#536072; }
+
+.item.dragging{ opacity:.6; transform: scale(.98); }
+.drop-marker{ height:10px; margin:4px 0; border-radius:999px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+
+/* ---------- Drawer ---------- */
+/* Drawer sichtbar während der Schließ-Animation */
+.drawer.open,
+.drawer.closing { pointer-events:auto; visibility:visible; }
+
+/* Während closing: rückwärts animieren */
+.drawer.closing .drawer-backdrop { opacity: 0; }
+.drawer.closing .drawer-panel { transform: translateX(-100%); }
+.drawer{ position:fixed; inset:0; pointer-events:none; visibility:hidden; }
+.drawer.open{ pointer-events:auto; visibility:visible; }
+.drawer-backdrop{ position:absolute; inset:0; background: rgba(0,0,0,.55); backdrop-filter: blur(2px); opacity: 0; transition: opacity .28s cubic-bezier(.22,1,.36,1); }
+.drawer.open .drawer-backdrop{ opacity:1; }
+.drawer-panel{
+  position:absolute; left:0; top:0; bottom:0; width:min(320px, 92vw);
+  padding:16px; transform: translateX(-100%);
+  background: rgb(var(--glass-rgb) / var(--glass-strong-alpha)); backdrop-filter: blur(12px);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.06), 0 24px 48px rgba(0,0,0,.45);
+  transition: transform .28s cubic-bezier(.22,1,.36,1);
+}
+.drawer.open .drawer-panel{ transform: translateX(0); }
+.drawer-panel h3{ margin:6px 0 10px; }
+.drawer-nav{ display:flex; flex-direction:column; gap:8px; }
+.drawer-link{ align-items: center; gap: 8px; display: flex; text-align:left;  border:0; border-radius:12px; padding:12px 14px; cursor:pointer; background:#1b1f25; color:var(--ink); }
+.drawer-link .btn-drawer-text {font-weight: bold;}
+.drawer-link:hover{ background:#262b33; }
+html[data-theme="light"] .drawer-link{ background:#f1f4f9; color:#0b1220; }
+html[data-theme="light"] .drawer-link:hover{ background:#e8ecf5; }
+
+/* ---------- Modal (shared) ---------- */
+.modal{
+  position: fixed;
+  inset: 0;
+  visibility: hidden;          /* statt display:none -> erlaubt Ausblend-Animation */
+  pointer-events: none;
+  z-index: 100;
+}
+
+.modal.open,
+.modal.closing{                 /* während Close-Animation sichtbar lassen */
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.modal-backdrop{
+  position:absolute; inset:0;
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(2px);
+  opacity: 0;                   /* Startzustand für Fades */
+  transition: opacity .22s cubic-bezier(.22,1,.36,1);
+}
+
+.modal.open .modal-backdrop{ opacity: 1; }
+.modal.closing .modal-backdrop{ opacity: 0; }
+
+/* Deine bestehende Zentrierung/Grösse bitte beibehalten */
+.modal-dialog{
+  position:absolute; left:50%; top:50%;
+  transform:translate(-50%,-50%);
+  width:min(760px, 94vw);
+  padding:22px;
+}
+#itemForm h2, #settingsForm h2{ margin: 6px 0 10px; font-size:20px; }
+.field{ display:flex; flex-direction:column; gap:8px; margin:14px 0; }
+.label{ color:#d5dbe3; font-size:14px; }
+html[data-theme="light"] .label{ color:#38455b; }
+#fTitle{ background: transparent; border:0; border-bottom:1px solid #5c6169; padding:10px 4px; color:var(--ink); }
+/* weiche Animation */
+#fTitle{ transition: border-color .2s ease; }
+
+/* Fokus-Style: Linie in Akzentfarbe */
+#fTitle:focus,
+#fTitle:focus-visible{
+  outline: none;
+  border-bottom-color: var(--accent);
+}
+
+/* Notizen: gleicher Fokus-Rand wie beim Titel */
+#fNotes{
+  /* Grundlinie wie beim Titel, aber als Vollrand */
+  border: 1px solid #5c6169;
+  /* weiche Farbtransition wie beim Titel */
+  transition: border-color .2s ease;
+  /* (Textarea-Hintergrund behält die bestehenden Regeln) */
+}
+
+#fNotes:focus,
+#fNotes:focus-visible{
+  outline: none;
+  border-color: var(--accent);
+}
+
+html[data-theme="light"] #fNotes{
+  border-color: #c2c9d6;
+}
+
+
+html[data-theme="light"] #fTitle{ border-bottom-color:#c2c9d6; }
+.row{ display:flex; align-items:center; gap:12px; margin:14px 0; }
+.row-inputs{ display:flex; gap:12px; }
+textarea{ width:100%; resize:vertical; min-height:140px; border:0; border-radius:14px; background:#2b2b2b; color:#fff; padding:12px; }
+textarea:active {box-shadow: white;}
+html[data-theme="light"] textarea{ background:#eef1f6; color:#0b1220; }
+
+.settings .settings-section{ margin: 14px 0 18px; }
+.range-row{ display:flex; align-items:center; gap:12px; }
+.range-row input[type="range"]{ width:100%; accent-color: var(--accent); }
+.range-value{ min-width:48px; text-align:right; font-variant-numeric: tabular-nums; }
+.hint{ color:#b9c0c9; }
+html[data-theme="light"] .hint{ color:#6b7787; }
+
+.theme-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(120px,1fr)); gap:10px; margin-top:8px; }
+.theme-swatch{
+  display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.08);
+  background:#1b1f25; color:var(--ink); cursor:pointer;
+}
+
+/* === Farbschema-Kacheln: Hover & Click === */
+.theme-swatch{
+  position: relative;           /* für Ripple */
+  overflow: hidden;             /* Ripple begrenzen */
+  transform: translateY(0) scale(1);
+  transition: transform .16s ease, filter .16s ease, box-shadow .16s ease;
+}
+.theme-swatch:hover{
+  transform: translateY(-1px) scale(1.02);
+  filter: brightness(1.04);
+}
+.theme-swatch:active{
+  transform: translateY(0) scale(.98);
+}
+
+/* kleiner „Glow“ wenn ausgewählt + geklickt */
+.theme-swatch.clicked{
+  box-shadow: 0 0 0 2px var(--accent) inset, 0 8px 24px rgba(0,0,0,.25);
+}
+
+.theme-swatch span{ display:inline-block; width:20px; height:20px; border-radius:999px; box-shadow: inset 0 0 0 2px rgba(255,255,255,.15); }
+.theme-swatch.selected{ outline:2px solid var(--accent); background:#0e1117; }
+html[data-theme="light"] .theme-swatch{ background:#f1f4f9; border-color: rgba(0,0,0,.06); color:#0b1220; }
+html[data-theme="light"] .theme-swatch.selected{ background:#fff; }
+
+/* Segmented control (Dark/Light/Prio) */
+.segmented{ display:inline-flex; border-radius:12px; background: rgb(var(--glass-rgb)/.35); padding:4px; gap:4px; }
+.seg-btn{ border:0; padding:8px 12px; border-radius:10px; cursor:pointer; color:var(--ink); background: transparent; }
+.seg-btn.active{ background: linear-gradient(180deg, var(--accent-2), var(--accent)); color: var(--ink-inverse); }
+/* Smooth transitions */
+.seg-btn{
+  transition: background .18s ease, color .18s ease, transform .18s ease, box-shadow .18s ease;
+}
+
+/* === Mode-Buttons: Hover & Ripple === */
+#modeSegment .seg-btn{
+  position: relative;           /* für Ripple */
+  overflow: hidden;             /* Ripple begrenzen */
+  transform: translateY(0) scale(1);
+}
+#modeSegment .seg-btn:hover{
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 6px 18px rgba(0,0,0,.18) inset;
+}
+#modeSegment .seg-btn:active{
+  transform: translateY(0) scale(.98);
+}
+
+/* Ripple-Element (per JS eingefügt) */
+.seg-btn .ripple,
+.theme-swatch .ripple{
+  position: absolute;
+  width: var(--rs, 20px);
+  height: var(--rs, 20px);
+  left: var(--rx, 0);
+  top: var(--ry, 0);
+  border-radius: 999px;
+  background: currentColor;
+  opacity: .25;
+  transform: scale(0);
+  pointer-events: none;
+  animation: ripple-enter .5s ease-out forwards;
+}
+@keyframes ripple-enter{
+  to { transform: scale(1); opacity: 0; }
+}
+
+
+/* leichte Tiefe im aktiven Zustand */
+.seg-btn.active{
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
+}
+
+/* Auswahl-Animation */
+.seg-btn.anim-prio {
+  animation: prioPop .22s ease-out;
+}
+
+@keyframes prioPop {
+  0%   { transform: scale(1); }
+  60%  { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+
+html[data-theme="light"] .segmented{ background: rgb(0 0 0 / .06); }
+
+/* Prio-Seg farbliche Hinweise (optional) */
+.prio-seg .seg-btn[data-prio="low"]{}
+.prio-seg .seg-btn[data-prio="med"]{}
+.prio-seg .seg-btn[data-prio="high"]{}
+
+/* ----- Buttons global ----- */
+.btn{ border:0; border-radius:14px; padding:12px 16px; cursor:pointer; font-weight:700; line-height:1; transition: transform .05s ease, filter .15s ease, background .15s ease; user-select:none; }
+.btn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+.btn:disabled{ opacity:.6; cursor:not-allowed; }
+.btn-primary{ color: var(--ink-inverse); background: linear-gradient(180deg, var(--accent-2), var(--accent)); box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 35%, transparent); }
+.btn-primary:hover{ filter: brightness(1.03); }
+.btn-muted{ background:#5b636d; color:#fff; }
+.btn-muted:hover{ filter: brightness(1.05); }
+html[data-theme="light"] .btn-muted{ background:#ccd3df; color:#0b1220; }
+.modal-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:16px; }
+
+/* ----- Fancy Select / Filter Dropdowns ----- */
+.visually-hidden{ position:absolute !important; width:1px !important; height:1px !important; padding:0 !important; margin:-1px !important; overflow:hidden !important; clip:rect(0 0 0 0) !important; white-space:nowrap !important; border:0 !important; }
+.fs{ position:relative; display:inline-block; }
+.fs-btn{ display:flex; align-items:center; gap:8px; min-height:40px; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.08); background:#1b1f25; color:var(--ink); cursor:pointer; transition: filter .15s ease, background-color .15s ease, border-color .15s ease; }
+.fs-btn:hover{ filter:brightness(1.04); }
+.fs-btn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+.fs .chev{ width:14px; height:14px; margin-left:4px; transition: transform .18s ease; }
+.fs.open .chev{ transform: rotate(180deg); }
+.fs-menu{ position:absolute; top:calc(100% + 6px); left:0; right:0; z-index:999; padding:6px; margin:0; list-style:none; background: rgb(var(--glass-rgb) / var(--glass-strong-alpha)); border:1px solid rgba(255,255,255,.08); border-radius:14px; box-shadow: 0 20px 50px rgba(0,0,0,.45); opacity:0; transform: translateY(-4px) scale(.98); pointer-events:none; transition: opacity .16s ease, transform .16s ease; backdrop-filter: blur(10px); }
+.fs.open .fs-menu{ opacity:1; transform: translateY(0) scale(1); pointer-events:auto; }
+.fs-menu li{ padding:10px 10px; border-radius:10px; cursor:pointer; color:var(--ink); }
+.fs-menu li:hover, .fs-menu li:focus{ background:#262b33; outline: none; }
+.fs-menu li.selected{ outline:2px solid var(--accent); outline-offset:-2px; background:#1b1f25; }
+html[data-theme="light"] .fs-btn{ background:#f1f4f9; color:#0b1220; border-color: rgba(0,0,0,.06); }
+html[data-theme="light"] .fs-menu{ background:#fff; border-color: rgba(0,0,0,.08); }
+html[data-theme="light"] .fs-menu li:hover, html[data-theme="light"] .fs-menu li:focus{ background:#eef2f8; }
+
+/* ----- Smooth List Switch ----- */
+.list-switchable{ will-change: opacity, transform, filter; }
+.list-switch-out{ opacity: 0; transform: translateY(8px) scale(.98); filter: blur(2px); transition: opacity .18s ease, transform .18s ease, filter .18s ease; }
+.list-switch-in{ animation: listSwitchIn .24s cubic-bezier(.22,1,.36,1) both; }
+@keyframes listSwitchIn{ from{ opacity:0; transform: translateY(8px) scale(.98); filter: blur(2px); } to{ opacity:1; transform: none; filter: none; } }
+
+/* ===== Aktive Filter/Suche hervorheben ===== */
+.filters .fs.active .fs-btn{
+  border-color: transparent;
+  box-shadow: 0 0 0 2px var(--accent) inset;
+}
+
+.filters input[type="search"].is-active{
+  border-color: transparent;
+  box-shadow: 0 0 0 2px var(--accent) inset;
+}
+
+/* Sidebar-Tools: Backup/Restore (Design bleibt gleich) */
+.side-tools{
+  margin-top: 14px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+
+}
+.side-tools .icon.xsmall{
+  width: auto; /* nicht quetschen */
+  align-items: center;
+  text-align: left;
+}
+
+/* ===== Celebrate + Confetti ===== */
+.item.flash{
+  animation: flashGlow .6s ease-out both;
+}
+@keyframes flashGlow{
+  0%{ box-shadow: 0 0 0 rgba(0,0,0,0); transform: scale(1); }
+  30%{ box-shadow: 0 0 24px color-mix(in srgb, var(--accent) 60%, transparent); transform: scale(1.02); }
+  100%{ box-shadow: 0 0 0 rgba(0,0,0,0); transform: scale(1); }
+}
+
+.confetti{
+  position:absolute; inset:0; pointer-events:none; overflow:visible;
+}
+.confetti i{
+  position:absolute; left:50%; top:50%;
+  width:6px; height:10px; border-radius:1px;
+  opacity:0; transform: translate(-50%, -50%) scale(.8) rotate(0deg);
+  animation: confettiFly 700ms ease-out forwards;
+}
+@keyframes confettiFly{
+  0%  { opacity:0; transform: translate(-50%, -50%) scale(.8) rotate(0deg); }
+  10% { opacity:1; }
+  100%{
+    opacity:0;
+    transform:
+      translate(calc(-50% + var(--tx)), calc(-50% + var(--ty)))
+      scale(1) rotate(var(--rot));
+  }
+}
+
+/* ===== Layout-Variablen ===== */
+:root{
+  --sidebar-w: 280px;   /* Startbreite */
+  --card-scale: 1;      /* 0.85 – 1.35 */
+}
+
+/* Sidebar nutzt Variable */
+#sidebar{ width: var(--sidebar-w); }
+
+/* Vertikaler Splitter (zum Ziehen) */
+.v-splitter{
+  position: fixed;
+  left: calc(var(--sidebar-w) - 4px); /* leicht überlappen */
+  top: var(--topbar-h, 64px);         /* falls nicht gesetzt -> 64px */
+  bottom: 0;
+  width: 8px;
+  cursor: ew-resize;
+  z-index: 30;
+  background: transparent;
+}
+.v-splitter::after{
+  content:"";
+  position:absolute; inset:0;
+  border-left:1px solid rgba(255,255,255,.06);
+  border-right:1px solid rgba(0,0,0,.2);
+  opacity:0; transition: opacity .2s;
+}
+.v-splitter:hover::after,
+.v-splitter.dragging::after{ opacity:1; }
+
+/* ===== Skalierung: Karten & Listenreihen ===== */
+/* Vorsichtig dosiert: nur Karten/Einträge + Listenzeilen, nicht alles globale */
+.item{
+  font-size: calc(1rem * var(--card-scale));
+  padding: calc(12px * var(--card-scale)) calc(14px * var(--card-scale));
+}
+.item .title{ font-weight: 600; }
+.lists .list-btn,
+.list-row .list-btn{
+  font-size: calc(1rem * (0.94 + (var(--card-scale) - 1)*0.8)); /* leicht anpassen */
+}
+
+/* Optional: Abstände zwischen Karten sanft mitskalieren */
+#items{ gap: calc(10px * var(--card-scale)); }
+
+
+/* ===== Hover-Effekt für Einträge (sanftes Vergrößern) ===== */
+.items .item.card{
+  /* weiches Ein-/Ausblenden der Bewegung */
+  transition: transform .16s cubic-bezier(.22,1,.36,1), box-shadow .16s ease, background-color .16s ease;
+  will-change: transform;
+}
+
+/* Hover mit Maus */
+.items .item.card:hover{
+  transform: scale(1.02);
+  z-index: 2; /* über Nachbarn heben, damit nichts abgeschnitten wird */
+  box-shadow: 0 12px 36px rgba(0,0,0,.40);
+}
+
+/* Auch per Tastaturfokus (z. B. Tab in Buttons innerhalb des Items) */
+.items .item.card:focus-within{
+  transform: scale(1.02);
+  z-index: 2;
+  box-shadow: 0 12px 36px rgba(0,0,0,.40);
+}
+
+/* Hell-Theme: etwas leichterer Schatten */
+html[data-theme="light"] .items .item.card:hover,
+html[data-theme="light"] .items .item.card:focus-within{
+  box-shadow: 0 12px 36px rgba(0,0,0,.25);
+}
+
+/* Bewegungsreduktion respektieren */
+@media (prefers-reduced-motion: reduce){
+  .items .item.card{
+    transition: none;
+  }
+}
+
+/* === Notebook: differenzierte Button-Styles === */
+/* Notizbuch-Buttons (größer, markanter) */
+
+.nb-col .list-row .nb-btn .ico{
+  margin-right:8px; opacity:.9;
+}
+
+.nb-col .list-row .sec-btn .ico{
+  margin-right:8px; opacity:.9;
+}
+
+/* Notizbuch-Buttons (Spalte 1) */
+#nbTree .list-row .nb-btn{
+  border-radius:16px;
+  padding:14px 16px;
+  font-weight:600;
+}
+#nbTree .list-row .nb-btn .ico{
+  margin-right:8px; opacity:.9;
+}
+
+/* Abschnitt-Buttons (Spalte 1, eingerückt) */
+#nbTree .list-row .sec-btn{
+  border-radius:12px;
+  padding:12px 14px;
+  font-weight:500;
+}
+#nbTree .list-row .sec-btn .ico{
+  margin-right:8px; opacity:.9;
+}
+
+/* Seiten-Buttons (Spalte 2): linker Farbstreifen */
+#pageList .list-row .page-btn{
+  position:relative;
+  border-radius:12px;
+  padding-left:16px; /* platz für den streifen */
+}
+#pageList .list-row .page-btn::before{
+  content:"";
+  position:absolute;
+  left:0; top:8px; bottom:8px;
+  width:4px;
+  border-radius:4px;
+  background: var(--page-stripe, var(--accent));
+}
+
+/* --- Notebook: Click-Pulse für List-Buttons --- */
+.list-btn.pulse {
+  animation: nbPulse .18s ease-out both;
+}
+
+@keyframes nbPulse {
+  0%   { transform: scale(.96); }
+  60%  { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+/* Inline-Rename: Input soll die komplette Button-Fläche abdecken */
+.list-btn.renaming { padding: 0 !important; }
+.list-btn.renaming .inline-rename{
+  display: block;
+  width: 100%;
+  background: transparent;
+  color: inherit;
+  border: 0;
+  outline: none;
+  /* nimm das normale Button-Padding hierher, damit sich optisch nichts ändert */
+  padding: 14px 16px;
+  font: inherit;
+  text-align: left;
+  border-radius: inherit;
+}
+
+/* Volles Ersatzfeld während des Inline-Rename (ersetzt den Button 1:1) */
+.rename-field{
+  display:block;
+  width:100%;
+  background: transparent;
+  color: inherit;
+  border: 0;
+  outline: none;
+  padding: 14px 16px;       /* wie deine list-btn */
+  font: inherit;
+  text-align: left;
+  border-radius: inherit;
+}
+
+/* Geöffnetes Notizbuch farblich hervorheben */
+#nbTree .list-row .nb-btn.open {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent) 20%, #1b1f25),
+    color-mix(in srgb, var(--accent-2) 20%, #1b1f25)
+  );
+  border: 1px solid rgba(255,255,255,0.12);
+}
+html[data-theme="light"] #nbTree .list-row .nb-btn.open {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent) 25%, #f1f4f9),
+    color-mix(in srgb, var(--accent-2) 25%, #f1f4f9)
+  );
+  border-color: rgba(0,0,0,0.08);
+}
+
+:root{
+  /* Breite des Textkörpers im Editor – kanns du bei Bedarf anpassen */
+  --editor-max-width: 760px;
+}
+
+/* „Papier“-Wrapper im Editor */
+.editor-paper{
+  margin: 10px auto 14px;
+  max-width: var(--editor-max-width);
+  padding: 16px 16px;
+  border-radius: var(--radius);
+  background:
+    linear-gradient(rgb(var(--glass-rgb) / calc(var(--card-alpha) + .08)), rgb(var(--glass-rgb) / calc(var(--card-alpha) + .08))) padding-box,
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 30%, transparent), color-mix(in srgb, var(--accent-2) 30%, transparent)) border-box;
+  border: 1px solid rgba(255,255,255,.06);
+  transition: box-shadow .18s ease, transform .18s ease, background .18s ease;
+}
+html[data-theme="light"] .editor-paper{
+  border-color: rgba(0,0,0,.06);
+}
+
+/* Sanfte Fokus-Animation: wenn der Editor Fokus hat */
+.content.nb-col:focus-within .editor-paper{
+  transform: translateY(-1px);
+  box-shadow: 0 16px 42px rgba(0,0,0,.35);
+}
+
+/* Save-Status (rechts im Header) dezenter */
+#saveStatus{ font-size: 12px; opacity: .9; }
+
+/* Ersatzfeld für echtes Inline-Rename (Button wird temporär ersetzt) */
+.rename-field{
+  display:block;
+  width:100%;
+  background: transparent;
+  color: inherit;
+  border: 0;
+  outline: none;
+  padding: 14px 16px;
+  font: inherit;
+  text-align: left;
+  border-radius: inherit;
+}
+
+/* === Notebook: weißes Editor-Fenster mit Titel/Datum wie OneNote === */
+
+/* dunkles/helles Thema: Editor bleibt bewusst weiß/schwarz */
+html[data-theme="dark"] .content.nb-col,
+html[data-theme="light"] .content.nb-col{
+  background: #fff !important;
+  color: #000;
+}
+
+/* === Notebook: volle Breite links, contenteditable statt Textarea === */
+
+/* rechte Spalte bleibt voll weiß, aber mit normalem Seitenpadding */
+.content.nb-col{
+  background: #ffffff !important;
+  color: #000000;
+  padding: 20px 24px; /* links/rechts etwas Luft */
+}
+
+/* Editor-Container nicht zentrieren, volle Breite nutzen */
+.editor-sheet{
+  max-width: 100%;
+  margin: 0;
+  padding: 8px 0 18px;
+  background: #ffffff;
+  color: #000;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  display: flex;             /* NEU */
+  flex-direction: column;    /* NEU */
+  min-height: 0;             /* NEU: nötig, damit .editor-body scrollen darf */
+}
+
+/* Titel bleibt einfach links */
+.editor-title{
+  width: 100%;
+  font-family: Calibri, "Segoe UI", Arial, sans-serif;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #000;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid #e5e7eb;  /* Unterlinie wie OneNote */
+  outline: none;
+  padding: 8px 0;
+}
+
+/* Datum/Meta direkt unter dem Titel */
+.editor-meta{
+  margin-top: 6px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Schreibfläche: contenteditable – ohne Box, mit echten Zeilenumbrüchen */
+.editor-body{
+  /* Höhe nicht erzwingen – die Flex-Logik übernimmt das */
+  width: 100%;
+  font-family: Calibri, "Segoe UI", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  color: #000;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: none;
+  padding-top: 12px;
+
+  /* NEU/Ändert: eigenes Scrolling im Editor */
+  flex: 1;
+  min-height: 0;             /* WICHTIG: zusammen mit flex-Parent erlaubt Scrollbar */
+  overflow-y: auto;          /* Scrollbar in der Schreibfläche */
+  resize: none;              /* Resize-Griff unten rechts AUS */
+
+  /* Zeilenumbrüche wie in Editoren/Word */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+
+
+/* Platzhalter für leeren contenteditable */
+.editor-body:empty:before{
+  content: attr(data-placeholder);
+  color: #9aa1ae;
+  pointer-events: none;
+}
+
+/* Sicherheit: alte Textarea-Styles nicht greifen lassen, falls das Element doch textarea wäre */
+textarea.editor-body{
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+#nbBackupSegment .seg-btn{ cursor: pointer; }
+#nbBackupSegment .seg-btn.active{ background: linear-gradient(180deg, var(--accent-2), var(--accent)); color: var(--ink-inverse); }
+
+/* === Status-Modal (Erfolg) === */
+.status-wrap{
+  display:flex; align-items:center; gap:14px;
+}
+.status-icon{
+  width:54px; height:54px; border-radius:999px;
+  display:grid; place-items:center;
+  background: color-mix(in srgb, var(--success) 22%, transparent);
+  color: var(--success);
+  font-size: 26px; font-weight: 900;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--success) 45%, transparent);
+}
+.status-title{
+  margin:0; font-size: 22px; line-height:1.2;
+}
+.status-subtitle{
+  margin:6px 0 0; font-size: 14px; opacity:.9;
+}
+
+/* === Modal Buttons: Hover/Press + Ripple === */
+.modal .btn,
+.modal .pressable{
+  position: relative;
+  overflow: hidden;              /* für den Ripple */
+  transition: transform .08s ease, filter .18s ease, box-shadow .18s ease, background-color .18s ease;
+  will-change: transform, box-shadow;
+}
+
+.modal .btn:hover,
+.modal .pressable:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(0,0,0,.22);
+  filter: brightness(1.03);
+}
+
+html[data-theme="light"] .modal .btn:hover,
+html[data-theme="light"] .modal .pressable:hover{
+  box-shadow: 0 8px 20px rgba(0,0,0,.12);
+}
+
+.modal .btn:active,
+.modal .pressable:active{
+  transform: translateY(1px) scale(.98);
+  filter: brightness(.98);
+  box-shadow: 0 4px 12px rgba(0,0,0,.18);
+}
+
+/* Tastaturfokus sichtbar */
+.modal .btn:focus-visible,
+.modal .pressable:focus-visible{
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Ripple-Element (per JS hinzugefügt) */
+.modal .ripple{
+  position: absolute;
+  border-radius: 999px;
+  transform: scale(0);
+  animation: rippleAnim .6s ease-out forwards;
+  background: currentColor;
+  opacity: .22;                  /* dezenter */
+  pointer-events: none;
+  mix-blend-mode: multiply;
+}
+@keyframes rippleAnim{
+  to{ transform: scale(16); opacity: 0; }
+}
+
+/* === Modal: Ein-/Ausblend-Animation (fixiert, ohne Springen) === */
+
+/* Safety: Dialog immer exakt zentrieren (falls Basis-Rule fehlt/überschrieben wurde) */
+.modal .modal-dialog{
+  will-change: transform, opacity;
+  /* ACHTUNG: Nur setzen, wenn du diese Eigenschaften nicht schon global definierst.
+     Falls du bereits in style.css (weiter oben) .modal-dialog mit position/left/top/transform definiert hast,
+     kannst du die nächsten vier Zeilen weglassen. */
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%); /* Basis-Zentrierung bleibt IMMER erhalten */
+}
+
+/* Beim Öffnen: subtil von leicht oberhalb in die Mitte fahren, ohne die Basis zu verlieren */
+.modal.open .modal-dialog{
+  animation: modalInCentered .22s cubic-bezier(.22,1,.36,1);
+}
+
+/* Beim Schließen: kurz zurück, weich ausfaden */
+.modal.closing .modal-dialog{
+  animation: modalOutCentered .16s ease-in forwards;
+}
+
+@keyframes modalInCentered{
+  from{
+    opacity: 0;
+    transform: translate(-50%, calc(-50% - 6px)) scale(.985); /* relativ zur Mitte */
+    filter: blur(1px);
+  }
+  to{
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    filter: none;
+  }
+}
+
+@keyframes modalOutCentered{
+  from{
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    filter: none;
+  }
+  to{
+    opacity: 0;
+    transform: translate(-50%, calc(-50% - 4px)) scale(.985);
+    filter: blur(.5px);
+  }
+}
+
+/* In-Animation (appear) */
+@keyframes editorIn {
+  from{
+    opacity: 0;
+    transform: translateY(8px) scale(.985);
+    filter: blur(1px);
+  }
+  to{
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+.editor-anim-in{
+  animation: editorIn .22s cubic-bezier(.22,1,.36,1) both;
+}
+
+/* Out-Animation (disappear) */
+@keyframes editorOut {
+  from{
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+  to{
+    opacity: 0;
+    transform: translateY(-4px) scale(.985);
+    filter: blur(.5px);
+  }
+}
+.editor-anim-out{
+  animation: editorOut .16s ease-in both;
+}
+
+/* Empty State sanft ein-/ausblenden */
+@keyframes fadeInUp {
+  from{ opacity: 0; transform: translateY(6px); filter: blur(1px); }
+  to  { opacity: 1; transform: none;        filter: none; }
+}
+@keyframes fadeOutUp {
+  from{ opacity: 1; transform: none; filter: none; }
+  to  { opacity: 0; transform: translateY(-4px); filter: blur(.5px); }
+}
+.empty-anim-in{  animation: fadeInUp .20s cubic-bezier(.22,1,.36,1) both; }
+.empty-anim-out{ animation: fadeOutUp .12s ease-in both; }
+
+/* Bewegungsreduktion respektieren */
+@media (prefers-reduced-motion: reduce){
+  .editor-anim-in, .editor-anim-out,
+  .empty-anim-in, .empty-anim-out{
+    animation-duration: .01s !important;
+    animation-timing-function: linear !important;
+    filter: none !important;
+    transform: none !important;
+  }
+}
+
+/* === Editor: Zeilenumbrüche sichtbar erzwingen (hohe Spezifität) === */
+#pageContent.editor-body{
+  white-space: pre-wrap !important;  /* \n bleiben sichtbar */
+  overflow-wrap: anywhere;           /* lange Wörter/URLs umbrechen */
+}
+
+/* === Bucket: Sidebar Smooth Open/Close === */
+
+/* Basis: Sidebar-Breite wird animiert */
+.sidebar{
+  width: var(--sidebar-w);                 /* Standardbreite aus Prefs */
+  transition: width .22s cubic-bezier(.22,1,.36,1);
+  overflow: hidden;                        /* Inhalt nicht herausragen lassen beim Schließen */
+}
+
+/* Inhalt in der Sidebar leicht faden (vermeidet Text-"Zuckeln") */
+.sidebar > *{
+  opacity: 1;
+  transition: opacity .16s ease;
+}
+body.sidebar-collapsed .sidebar > *{
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Vertikaler Resizer sanft ausblenden/deaktivieren */
+#sidebarResizer{
+  transition: opacity .16s ease;
+}
+body.sidebar-collapsed #sidebarResizer{
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Collapsed-State: Sidebar-Breite = 0 (animiert via transition oben) */
+body.sidebar-collapsed .sidebar{
+  width: 0px;
+}
+
+/* Inhalt (main) füllt automatisch – keine harte Verschiebung nötig.
+   Falls du ein explizites Padding/Gap animieren willst, füge hier weitere Transitions hinzu. */
+
+/* Motion-Preference respektieren */
+@media (prefers-reduced-motion: reduce){
+  .sidebar{ transition: none !important; }
+  .sidebar > *{ transition: none !important; }
+  #sidebarResizer{ transition: none !important; }
+}
+
+/* === Ribbon / Menüband unter der Topbar === */
+.ribbon{
+  margin: 0 18px 14px 18px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+}
+.ribbon-inner{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.ribbon-group{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.ribbon-divider{
+  width: 1px;
+  height: 28px;
+  background: color-mix(in srgb, var(--ink) 18%, transparent);
+  margin: 0 4px;
+}
+
+.ff-label{
+  font-size: 12px;
+  opacity: .8;
+}
+.ff-select{
+  height: 34px;
+  min-width: 180px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--ink) 18%, transparent);
+  background: color-mix(in srgb, #fff 80%, var(--card) 20%);
+  font: 14px/1.2 Calibri, "Segoe UI", Arial, sans-serif;
+}
+.ff-select option[value="Calibri"]{ font-family: Calibri, "Segoe UI", Arial, sans-serif; }
+.ff-select option[value="Arial"]{ font-family: Arial, Helvetica, sans-serif; }
+.ff-select option[value="Times New Roman"]{ font-family: "Times New Roman", Times, serif; }
+.ff-select option[value="Consolas"]{ font-family: Consolas, "Courier New", monospace; }
+.ff-select option[value="Courier New"]{ font-family: "Courier New", monospace; }
+.ff-select option[value="Verdana"]{ font-family: Verdana, Geneva, Tahoma, sans-serif; }
+
+/* Ribbon Buttons (nutzen deine Pressable-Optik + Active-State) */
+.rbtn{
+  position: relative;
+  height: 36px;
+  min-width: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--ink) 18%, transparent);
+  background: color-mix(in srgb, #fff 75%, var(--card) 25%);
+  font-weight: 700;
+  letter-spacing: .4px;
+  transition: transform .08s ease, filter .18s ease, box-shadow .18s ease, background-color .18s ease;
+}
+.rbtn:hover{ transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,0,0,.18); }
+.rbtn:active{ transform: translateY(1px) scale(.98); }
+.rbtn[aria-pressed="true"]{
+  background: linear-gradient(180deg, var(--accent-2), var(--accent));
+  color: var(--ink-inverse);
+  border-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce){
+  .rbtn{ transition: none; }
+}
+
+.pill-btn{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 2px solid var(--accent);
+  background: color-mix(in srgb, #fff 92%, var(--card) 8%);
+  color: var(--ink);
+  font-weight: 700;
+  letter-spacing: .2px;
+
+  transition: transform .08s ease, box-shadow .18s ease, background-color .18s ease, border-color .18s ease;
+}
+
+/* Nur schlichtes Plus – KEIN umkreistes Plus mehr */
+.pill-btn .plus{
+  border: none;              /* <— Umkreisung aus */
+  width: auto;
+  height: auto;
+  line-height: 1;
+  font-weight: 900;
+  margin-left: 2px;
+}
+
+.pill-btn:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 10px 26px rgba(0,0,0,.14);
+  background: color-mix(in srgb, #fff 96%, var(--card) 4%);
+  border-color: var(--accent-2);
+}
+.pill-btn:active{
+  transform: translateY(1px) scale(.985);
+}
+
+/* Spaltenabstände etwas harmonischer (wie im Screenshot) */
+#nbTree{ padding: 10px 10px 6px 10px; }
+/* rechte Spalte: etwas mehr Innenabstand, damit Liste sauber sitzt */
+#pageList{
+  padding: 6px 16px 14px 16px;
+}
+
+/* === Notebook: 2-Spalten-Layout (links Panel, rechts Editor) === */
+/* === Notebook: 2-Spalten-Layout (links Panel, rechts Editor) === */
+.nb-layout{
+  display: grid;
+  grid-template-columns: var(--sidebar-w, 520px) 1fr; 
+  gap: 18px;
+  height: calc(100vh - 120px); /* volle Höhe abzüglich Topbar+Ribbon */
+  padding: 0 18px 18px;
+}
+
+.nb-layout .content.nb-col{
+  display: flex;             /* damit der Editor-Bereich eine Spalte bilden kann */
+  flex-direction: column;
+  min-height: 0;             /* WICHTIG: erlaubt dem Kind, zu schrumpfen -> Scrollbar greift */
+  overflow: hidden;          /* verhindert Durchscheinen des Hintergrunds */
+}
+
+
+/* Gemeinsames Panel (Notizbücher/Abschnitte | Trenner | Seiten) */
+.nb-split{
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr;
+  height: 100%;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* Innenabstände der linken/rechten Panelhälfte */
+.nb-left, .nb-right{ padding: 6px; }
+
+.nb-sep{
+  width: 2px;                    /* etwas sichtbarer als 1px */
+  margin: 8px 0;                 /* oben/unten Lücke, damit nicht „voll durchgezogen“ */
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--ink) 22%, transparent) 0 10px,  /* Segment */
+      transparent 10px 20px                                    /* Lücke */
+    );
+  border-radius: 999px;
+}
+
+
+/* Seiten-Header kompakt */
+.page-top{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 8px 8px 8px;
+  margin: 0 0 8px 0;
+}
+
+/* Abstand zwischen Seiten-Karten */
+#pageList .list-row{ margin-bottom: 10px; }
+#pageList .list-row:last-child{ margin-bottom: 0; }
+
+/* Optional: auch links die Einträge leicht lockern */
+#nbTree .list-row{ margin-bottom: 10px; }
+#nbTree .list-row:last-child{ margin-bottom: 0; }
+
+/* Rechte Spalte (Editor) — verhindert „Klemmen“/Versatz */
+.editor-col{
+  min-width: 0;             /* wichtig für Grids: Text darf umbrechen */
+  display: block;
+}
+
+
+/* Responsiv: Panelbreite anpassen */
+@media (max-width: 1280px){
+  .nb-layout{ grid-template-columns: 580px 1fr; }
+}
+@media (max-width: 980px){
+  .nb-layout{ grid-template-columns: 1fr; } /* unter 980px: untereinander */
+  .editor-col{ margin-top: 12px; }
+}
+
+.nb-col{
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* ==== Notebook-Header (grüne Karte) – Layout & Buttons neu ansetzen ==== */
+
+/* 1) Header-Karte luftiger und umbrechbar, damit eine zweite Zeile für die Actions entstehen kann */
+.nb-header,
+.nb-notebook,
+.nbk-header,
+.nbk {                    /* einer dieser Klassen steckt bei dir auf der grünen Karte */
+  display: flex;
+  flex-wrap: wrap;        /* Buttons können in die nächste Zeile rutschen */
+  align-items: flex-start;
+  gap: 8px 10px;
+  padding: 14px 16px;     /* etwas mehr “Atmung” */
+  min-height: 72px;       /* sichtbare Höhe, damit nichts gequetscht wirkt */
+}
+
+/* 2) Titel/Name im Header minimal größer/lesbarer */
+.nb-header .title,
+.nb-notebook .title,
+.nbk-header .title,
+.nbk .title {
+  font-size: 1.06rem;
+  line-height: 1.3rem;
+  font-weight: 600;
+}
+
+/* 3) Actions als eigene Werkzeugleiste in Zeile 2, rechtsbündig */
+.nb-header .actions,
+.nb-notebook .actions,
+.nbk-header .actions,
+.nbk .actions {
+  order: 2;               /* unterhalb von Icon/Titel */
+  width: 100%;            /* volle Breite → eigene Zeile */
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;               /* Abstand zwischen den Buttons */
+  margin-top: 2px;
+}
+
+/* 4) Buttons selbst etwas größer/griffiger – ohne übertrieben zu wirken */
+.nb-header .actions .icon-btn,
+.nb-notebook .actions .icon-btn,
+.nbk-header .actions .icon-btn,
+.nbk .actions .icon-btn,
+.nb-header .actions button,
+.nb-notebook .actions button,
+.nbk-header .actions button,
+.nbk .actions button {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+}
+
+/* 5) (Feinschliff) – Wenn die Karte ein Icon links hat, verhindere, dass es die Actions stört */
+.nb-header .icon,
+.nb-notebook .icon,
+.nbk-header .icon,
+.nbk .icon {
+  flex: 0 0 auto;
+}
+
+/* Größeres Settings-Modal (mehr Platz für Optionen) */
+.modal-dialog.settings{
+  width: min(760px, 92vw);
+  max-height: 86vh;
+  padding: 18px;
+}
+.modal-dialog.settings .settings-section{
+  margin-bottom: 16px;
+}
+
+/* HUD-Overlay für die Live-Vorschau beim Ziehen (kompakt, mittig) */
+.slider-hud{
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, #fff calc(var(--glass-alpha, .75)*100%), var(--card));
+  box-shadow: 0 18px 44px rgba(0,0,0,.25);
+  border: 1px solid color-mix(in srgb, var(--ink) 20%, transparent);
+}
+.slider-hud .value{
+  min-width: 84px;
+  text-align: right;
+  font-weight: 700;
+  opacity: .9;
+}
+.slider-hud input[type="range"]{
+  width: min(520px, 74vw);
+}
+
+/* === Ribbon: Dark-Mode heller machen (Text/Buttons/Selects) === */
+html[data-theme="dark"] .ribbon .ff-label { color: #fff; opacity: .9; }
+
+html[data-theme="dark"] .ribbon .ff-select{
+  color: #fff;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.18);
+}
+
+html[data-theme="dark"] .ribbon .rbtn{
+  color: #fff;
+  background: rgba(255,255,255,.08);
+  border-color: rgba(255,255,255,.2);
+}
+html[data-theme="dark"] .ribbon .rbtn[aria-pressed="true"]{
+  color: var(--ink-inverse);
+}
+
+html[data-theme="dark"] .ribbon-divider{
+  background: rgba(255,255,255,.15);
+}
+
+/* === Kombinierte Topbar (Header + Tools) === */
+.topbar-merged .topbar-main{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: none;   /* NICHT begrenzen */
+  margin: 0;         /* NICHT zentrieren */
+  padding: 0;        /* KEIN Innenabstand */
+}
+
+
+.topbar-subdivider-h{
+  width: 100%;
+  height: 1px;
+  background: #d3d4d6;   /* hellgrau, dezent */
+  opacity: 0.9;
+  margin: 2px 0 4px;     /* wenig Luft über/unter der Linie */
+}
+
+.topbar-merged .topbar-main{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.topbar-merged .topbar-main .left{
+  display: grid;
+  grid-template-columns: auto 1fr; /* 1: Back-Button, 2: Titel (nimmt restliche Breite) */
+  grid-auto-rows: min-content;
+  column-gap: 10px;
+  row-gap: 6px;
+  align-items: center;
+  width: 100%;
+}
+
+/* Erste Zeile: Back-Button links, Titel rechts davon */
+.topbar-merged .topbar-main .left #backBtn{ grid-column: 1; }
+.topbar-merged .topbar-main .left h1{ grid-column: 2; }
+
+/* Linie und Ribbon sollen über die volle Breite gehen (neue Zeile, beide Spalten) */
+.topbar-merged .topbar-main .left .topbar-subdivider-h{ grid-column: 1 / -1; }
+.topbar-merged .topbar-main .left .ribbon-inner{ grid-column: 1 / -1; }
+
+
+.topbar-merged .topbar-main .right{
+  margin-left: auto;     /* schiebt nach ganz rechts */
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;            /* kein Innenabstand */
+}
+
+.topbar-merged h1{ margin:0; font-size: 22px; }
+
+/* Helle Trennlinie */
+.topbar-divider{
+  height: 1px;
+  background: #b8b9bb;           /* hellgrau */
+  border-radius: 999px;
+}
+html[data-theme="dark"] .topbar-divider{ background: rgba(255,255,255,.20); }
+
+.topbar-tools .ribbon-inner,
+.topbar-merged .topbar-main .left .ribbon-inner{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 0;
+  justify-content: flex-start;
+}
+.topbar-merged .ribbon-divider{
+  width: 1px; height: 28px;
+  background: #a2a3a5;
+  margin: 0 6px;
+}
+html[data-theme="dark"] .topbar-merged .ribbon-divider{ background: rgba(255,255,255,.20); }
+
+/* SVG im Zurück-Button passend einfärben */
+.icon-btn svg{ width:18px; height:18px; stroke: currentColor; fill: none; }
+
+/* === Modern Select ======================================================= */
+.select-modern{
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.14);
+  color: #e6eaf2;
+
+  padding: .55rem 2.25rem .55rem .8rem; /* rechts Platz für Pfeil */
+  border-radius: 14px;
+
+  font: inherit;
+  line-height: 1.2;
+
+  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+  cursor: pointer;
+}
+
+/* Hover */
+.select-modern:hover{
+  background: rgba(255,255,255,.08);
+  border-color: rgba(255,255,255,.22);
+}
+
+/* Fokus – Akzentfarbe deiner App */
+.select-modern:focus{
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+/* Pfeil-Icon als eingebettetes SVG (hell/dunkel passt sich an) */
+.select-modern{
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23cfd6e4' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right .6rem center;
+  background-size: 18px 18px;
+}
+
+/* Windows/Edge altes Pfeil-Icon ausblenden */
+.select-modern::-ms-expand{ display:none; }
+
+/* Light-Theme-Feinschliff (falls du das data-theme nutzt) */
+html[data-theme="light"] .select-modern{
+  background: rgba(0,0,0,.03);
+  border-color: rgba(0,0,0,.12);
+  color: #0f172a;
+}
+html[data-theme="light"] .select-modern:hover{
+  background: rgba(0,0,0,.045);
+  border-color: rgba(0,0,0,.18);
+}
+html[data-theme="light"] .select-modern{
+  background-image:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+}
+
+/* Option-Optik (wird je nach Browser unterschiedlich stark angewendet) */
+.select-modern option{
+  background: #202a35;
+  color: #e6eaf2;
+}
+html[data-theme="light"] .select-modern option{
+  background: #ffffff;
+  color: #0f172a;
+}
+
+/* === Toast Container (oben rechts) === */
+#toast-root {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 9999;
+}
+
+/* ===== Toast (Export-Erfolg) ===== */
+#toastHost{
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none; /* Host "klickt" nicht in den Flow */
+}
+
+/* === Inhalt/Zeilen-Layout im Toast === */
+.toast{
+  pointer-events: auto; /* Toast selbst ist klickbar */
+  display: grid;
+  grid-template-columns: 40px 1fr 28px;
+  align-items: center;
+  gap: 10px;
+  min-width: 280px;
+  max-width: min(420px, 90vw);
+  padding: 12px 12px 8px;
+  border-radius: 14px;
+  background: color-mix(in srgb, rgb(13, 141, 9) 18%, transparent);
+  box-shadow: 0 10px 30px color-mix(in srgb, rgb(13, 141, 9) 30%, transparent);
+  border: 1px solid color-mix(in srgb, rgb(13, 141, 9) 35%, transparent);
+  backdrop-filter: blur(10px) saturate(1.2);
+}
+
+.toast .toast-icon {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+}
+
+.toast .toast-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toast .toast-title {
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+#settings-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.toast .toast-subtitle {
+  opacity: 0.85;
+  line-height: 1.2;
+  font-size: 0.95em;
+}
+
+/* Icon links (großer Haken) */
+.toast .ico{
+  width: 40px; height: 40px; border-radius: 12px;
+  display: grid; place-items: center;
+  background: color-mix(in srgb, var(--success) 22%, transparent);
+  color: var(--success);
+  font-size: 22px; line-height: 1;
+}
+
+/* Textblock */
+.toast .txt h3{
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+}
+.toast .txt p{
+  margin: 2px 0 0;
+  font-size: 13px;
+  opacity: .9;
+}
+
+/* Close-Button (X) */
+.toast .close{
+  border: 0; background: transparent; color: inherit; cursor: pointer;
+  width: 28px; height: 28px; border-radius: 8px;
+  display: grid; place-items: center; font-size: 16px;
+}
+.toast .close:hover{ background: rgba(255,255,255,.08); }
+
+/* === Close Button (oben rechts im Toast) === */
+.toast .toast-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.7;
+}
+.toast .toast-close:hover { opacity: 1; }
+
+/* === Progressbar unten (wir animieren das innere DIV) === */
+.toast .progress{
+  grid-column: 1 / -1;
+  height: 3px;
+  width: 100%;
+  border-radius: 0 0 12px 12px;
+  background: rgba(255,255,255,.08);
+  overflow: hidden;
+  margin-top: 8px;
+}
+.toast .progress > .bar {
+  width: 100%;
+  height: 100%;
+  transition: width linear; /* Dauer setzen wir dynamisch per JS */
+}
+
+.toast .progress > i{
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transform-origin: left center;
+  transform: scaleX(1);
+  transition: transform linear;
+}
+
+/* Light-Mode kleine Kontraste anpassen */
+html[data-theme="light"] .toast{
+  border-color: rgba(0,0,0,.08);
+  box-shadow: 0 12px 30px rgba(0,0,0,.15);
+}
+html[data-theme="light"] .toast .ico{
+  background: color-mix(in srgb, var(--success) 18%, transparent);
+}
+
+/* ===== Komet (To-Do → Archiv) + Impact-Burst ===== */
+.fx-comet{
+  position: fixed;
+  left: 0; top: 0;
+  width: 10px; height: 10px;
+  border-radius: 999px;
+  background: #22c55e; /* Grün */
+  box-shadow:
+    0 0 0 2px rgba(34,197,94,.22),
+    0 0 22px rgba(34,197,94,.65),
+    0 0 44px rgba(34,197,94,.35);
+  pointer-events: none;
+  z-index: 99999;
+  transform: translate3d(0,0,0);
+  transition: transform 680ms cubic-bezier(.22,1,.36,1);
+}
+
+/* kleiner Schweif (optisch „Linie“) */
+.fx-comet::after{
+  content: "";
+  position: absolute;
+  right: 50%;
+  top: 50%;
+  width: 120px; height: 2px;
+  transform: translateY(-50%);
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(34,197,94,.0), rgba(34,197,94,.8));
+  filter: blur(0.3px);
+}
+
+/* Vollbild-Burst beim Aufprall */
+.fx-burst{
+  position: fixed; inset: 0;
+  pointer-events: none;
+  z-index: 99999;
+  overflow: visible;
+}
+.fx-burst .emitter{
+  position: absolute;
+  left: 0; top: 0;
+  transform: translate3d(var(--x,0), var(--y,0), 0);
+}
+.fx-burst i{
+  position: absolute;
+  left: 0; top: 0;
+  width: 8px; height: 8px;
+  border-radius: 2px;
+  background: #22c55e;
+  opacity: 0;
+  animation: burstFly 800ms ease-out forwards;
+}
+
+@keyframes burstFly{
+  0%   { opacity: 1; transform: translate3d(0,0,0) scale(.9) rotate(0deg); }
+  100% {
+    opacity: 0;
+    transform:
+      translate3d(var(--tx,0), var(--ty,0), 0)
+      scale(1) rotate(var(--rot,0deg));
+  }
+}
+
+/* Rename-Modal: Feld wie Titel mit Akzent-Linie */
+#renameInput{
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #5c6169;
+  padding: 10px 4px;
+  color: var(--ink);
+  transition: border-color .2s ease;
+}
+#renameInput:focus,
+#renameInput:focus-visible{
+  outline: none;
+  border-bottom-color: var(--accent);
+}
+html[data-theme="light"] #renameInput{ border-bottom-color:#c2c9d6; }
+
+/* === CTA: + Neue Liste / + Neuer Eintrag === */
+#addListBtn,
+#addItemBtn{
+  transform-origin: 50% 50%;
+
+}
+
+/* Hover: leicht anheben + Glow, ohne große Skalierung */
+#addListBtn:hover,
+#addItemBtn:hover{
+  transform: translateY(-2px) scale(1.015);
+  filter: brightness(1.06);
+  box-shadow: 0 14px 36px rgba(0,0,0,.35);
+}
+
+/* Press (gedrückt halten): minimal kleiner – Release triggert .pop in JS */
+#addListBtn:active,
+#addItemBtn:active{
+  transform: translateY(0) scale(.965);
+  box-shadow: 0 8px 22px rgba(0,0,0,.30);
+}
+#filtersToggleBtn { display: none; }
+/* === Danger Button (Archiv leeren) === */
+.btn.btn-danger{
+  background: linear-gradient(180deg, #e63946, #b92d38);
+  color: #fff;
+  border: none;
+  border-radius: 13px;
+  padding: 10px 20px;
+  font-weight: 600;
+  letter-spacing: .3px;
+  -webkit-backdrop-filter: blur(8px) saturate(1.1);
+  backdrop-filter: blur(8px) saturate(1.1);
+  box-shadow: 0 6px 18px rgba(230,57,70,.45);
+  transition: transform var(--press-dur) cubic-bezier(.22,1,.36,1),
+              box-shadow var(--press-dur) ease,
+              filter var(--press-dur) ease;
+}
+
+.btn.btn-danger:hover{
+  transform: translateY(-2px) scale(1.02);
+  filter: brightness(1.08);
+  box-shadow: 0 12px 28px rgba(230,57,70,.55);
+}
+
+.btn.btn-danger:active{
+  transform: scale(.96);
+  box-shadow: 0 6px 18px rgba(185,45,56,.55);
+}
+.fs-menu { z-index: 4000; }
+/* === Mobile Layout (<= 820px) ========================================== */
+@media (max-width: 820px){
+
+input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+
+
+ /* Content: transparent – alles sitzt direkt auf dem Hintergrundbild */
+  .content{
+    background: transparent !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    padding: 12px;                 /* kompakt */
+    overflow: visible;
+  }
+
+  /* Topbar hatten wir bereits auf transparent/fixed gestellt – passt zu diesem Look */
+
+  /* Top-Zeile als 2-Säulen-Grid:
+     - Neuer Eintrag nimmt fast volle Breite
+     - kleiner Filter-Button rechts daneben */
+  .content-top{
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-auto-rows: min-content;
+    gap: 8px;
+    margin-bottom: 10px;
+    z-index: 1 !important;
+    overflow: visible !important;
+  }
+
+
+  
+  /* Großer CTA fast volle Breite */
+  #addItemBtn{
+    grid-column: 1 / 2;
+    width: 100%;
+    justify-self: stretch;
+  }
+
+  /* Kleiner Filter-Button rechts */
+  #filtersToggleBtn { display: grid; }
+  html[data-theme="light"] #filtersToggleBtn{
+    background: rgba(255,255,255,.65);
+  }
+
+  /* Suche direkt UNTER der Top-Zeile – volle Breite */
+  #searchInput{
+    grid-column: 1 / -1;       /* volle Breite */
+    width: 100%;
+    min-height: 42px;
+    order: 2;                  /* sicher unter den Buttons */
+  }
+
+    .content.glass {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important; /* für iOS Safari */
+    background: transparent !important;       /* Hintergrund direkt sichtbar */
+    box-shadow: none !important;
+    border: 0 !important;
+  }
+
+  /* Fortschrittszeile direkt unter der Suche */
+  .progress-wrap{
+    grid-column: 1 / -1;
+    order: 3;
+    margin: 6px 0 8px;
+  }
+
+  /* Das eigentliche Dropdown-Panel */
+  .filters .fs-menu,
+  .filters select,
+  .filters .fs-btn {
+    /* verhindert Layout-Sprünge, weil wir gleich Panel-Style setzen */
+  }
+.filters .fs-menu{ z-index: 5000; } 
+ .filters.open{
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    /* fixe Obergrenze; wird von JS beim Öffnen dynamisch gesetzt,
+       falls du „echte“ auto-Höhe willst */
+    max-height: 240px;
+    pointer-events: auto;
+  }
+
+
+  /* Im Panel: Suche soll NICHT drin sein (die steht ja oben vollbreit).
+     Wir blenden die Suche in der .filters-Gruppe aus, falls dort vorhanden. */
+  .filters #searchInput{
+    display: none !important;
+  }
+
+  /* Selects im Panel hübsch anordnen */
+  .filters select{
+    width: 100%;
+    min-height: 36px;
+  }
+
+
+ /* Original-Element beim Drag sichtbar lassen */
+  .item.dragging,
+  .list-row.dragging{
+    opacity: 1 !important;
+    transform: scale(1.02);
+    z-index: 5;
+    box-shadow: 0 8px 28px rgba(0,0,0,.3),
+                0 0 0 2px var(--accent);
+  }
+  
+ /* Listen-Buttons (Umbenennen/Löschen) immer sichtbar */
+  .list-actions{
+    opacity: 1 !important;
+  }
+
+  /* Item-Actions (Bearbeiten/Löschen) immer sichtbar */
+  .item-actions{
+    opacity: 1 !important;
+  }
+
+   .list-actions, .item-actions{
+    opacity: 1 !important;
+    transition: none !important;
+  }
+  
+  /* Layout stapeln */
+  .layout{
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 0 10px 12px;
+    margin-top: var(--topbar-h, 64px);
+    overflow: visible !important;
+  }
+
+  /* Sidebar als Off-Canvas */
+  .sidebar{
+    position: fixed;
+    z-index: 30;
+    top: var(--topbar-h, 64px);
+    left: 0;
+    bottom: 0;
+    width: min(86vw, 340px) !important; /* ignoriert --sidebar-w */
+    max-width: 86vw;
+    transform: translateX(-100%);
+    transition: transform .28s cubic-bezier(.22,1,.36,1);
+    border-radius: 0 16px 16px 0;
+  }
+  body.sb-open .sidebar{
+    transform: translateX(0);
+  }
+
+  /* Backdrop, wenn Sidebar offen */
+  body.sb-open::after{
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 25;
+    background: rgba(0,0,0,.55);
+    backdrop-filter: blur(2px);
+  }
+
+  /* Vertikaler Resizer ausblenden */
+  #sidebarResizer{ display: none; }
+
+  /* Content: weniger Mindesthöhe, damit Scroll auf Mobile sauber ist */
+  .content{
+    min-height: auto;
+    padding: 14px;
+  }
+
+  /* Headerzeile: Buttons erste Zeile, Filter umbrechen darunter */
+  .content-top{
+    gap: 10px;
+  }
+
+  .filters{
+    /* statt display:none -> immer vorhanden, aber eingeklappt */
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* zwei Spalten für Selects */
+    gap: 8px;
+    background: transparent ;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: blur(10px);
+    border: 0 ;
+    border-radius: 14px;
+    box-shadow: none;
+    margin-bottom: 8px;
+     position: relative;
+     z-index: 3000;
+     backdrop-filter: none;
+    opacity: 0;
+    transform: translateY(-6px) scale(.98);
+    max-height: 0;
+    overflow: hidden;
+    pointer-events: none;
+
+    /* Animationen */
+    transition:
+      opacity .22s cubic-bezier(.22,1,.36,1),
+      transform .22s cubic-bezier(.22,1,.36,1),
+      max-height .28s cubic-bezier(.22,1,.36,1);
+  }
+  .filters input[type="search"]{
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .filters select{
+    flex: 1 1 calc(50% - 6px);
+    min-width: 0;
+  }
+
+  /* Item-Karten etwas dichter, bessere Touch-Ziele */
+    .item{
+    grid-template-columns: 28px 1fr auto; /* Checkbox kleiner */
+    gap: 8px;
+    padding: 10px 12px;                   /* weniger Innenabstand */
+    border-radius: 18px;                  /* kompaktere Ecken */
+    font-size: 0.9rem;                    /* Text etwas kleiner */
+  }
+  .item .row1{ gap: 8px; }
+  .icon.small{ padding: 10px 12px; }
+
+    .item .title{
+    font-size: 14px;                      /* Titel kleiner */
+  }
+
+  .item .notes{
+    font-size: 13px;                      /* Notizen kleiner */
+    -webkit-line-clamp: 1;                /* max. 1 Zeile anzeigen */
+  }
+
+  .chip{
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+ .drag-handle,
+  .drag-handle.list{
+    cursor: grab;
+  }
+  .icon.small{
+    padding: 8px 10px;                    /* kompaktere Buttons */
+  }
+  
+  /* Fortschrittszeile: übereinander */
+  .progress-wrap{
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .modal .modal-dialog{
+    width: min(92vw, 760px);
+    padding: 16px;
+  }
+
+  
+.topbar{
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    margin: 0;
+    border-radius: 0;
+    background: transparent;   /* Hintergrund weg */
+    box-shadow: none;          /* Schatten entfernen */
+    backdrop-filter: none;     /* Glas-Effekt deaktivieren */
+    z-index: 100;
+    padding: 10px 14px;
+  }
+  .topbar h1{ font-size: 18px; }
+}
+
+/* Optional: iOS „Gummiband“ weniger ruckelig */
+@supports (-webkit-touch-callout: none){
+  .content, .sidebar, body.sb-open::after { -webkit-backdrop-filter: blur(2px); }
+  .sidebar, .content { -webkit-overflow-scrolling: touch; }
+}
+
+/* ==== Modal: Nur im Dialog scrollen (Mobile & generell) ==== */
+
+/* Dialog-Hülle begrenzen und als Flex-Container nutzen */
+.modal .modal-dialog{
+  max-height: min(92vh, calc(var(--app-h) - 40px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;              /* nix „auslaufen“ lassen */
+}
+
+/* Form im Dialog = Spalte, kann scrollen */
+.modal .modal-dialog form{
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 0;                 /* wichtig fürs Scrollen in Flex-Layouts */
+  overflow: auto;                /* ← hier scrollt es */
+  overscroll-behavior: contain;  /* Scroll nicht nach außen „durchreichen“ */
+  padding-right: 4px;            /* kleiner Platz für Scrollbar */
+}
+
+/* Actions-Leiste unten „anpinnen“ */
+.modal .modal-dialog .modal-actions{
+  position: sticky;
+  bottom: 0;
+  padding-top: 10px;
+  margin-top: 6px;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0) 0%, rgb(var(--glass-rgb) / var(--glass-strong-alpha)) 28%);
+  backdrop-filter: blur(8px);
+  z-index: 2;
+}
+
+/* Settings-Dialog hat bereits max-height – sicherstellen, dass er gleich funktioniert */
+.modal-dialog.settings{
+  max-height: 86vh;              /* deine vorhandene Höhe beibehalten */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Schwebendes Element beim Touch-Drag */
+.drag-ghost{
+  position: fixed;
+  left: 0; top: 0;
+  transform: translate(-50%, -50%) scale(.98);
+  pointer-events: none;
+  z-index: 99999;
+  opacity: .92;
+  filter: drop-shadow(0 18px 36px rgba(0,0,0,.35));
+  border-radius: 22px;
+}
+
+/* Während Touch-Drag Scroll verhindern */
+body.dragging-touch{
+  touch-action: none;
+  overscroll-behavior: contain;
+}
+
+/* === Quick-Add Bottom Sheet ========================================== */
+.sheet{ position: fixed; inset: 0; z-index: 9998; display: none; }
+.sheet[hidden]{ display: none !important; }
+.sheet.open{ display: block; }
+
+.sheet-backdrop{
+  position:absolute; inset:0;
+  background: rgba(0,0,0,.45);
+  opacity: 0;
+  transition: opacity var(--press-dur) cubic-bezier(.22,1,.36,1);
+}
+
+.sheet-panel{
+  position:absolute; left:0; right:0; bottom: var(--kb-safe);
+  border-radius: 18px 18px 0 0;
+  backdrop-filter: blur(10px);
+  transform: translateY(100%);
+  transition: transform var(--press-dur) cubic-bezier(.22,1,.36,1);
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  box-shadow: 0 -12px 36px rgba(0,0,0,.35);
+}
+
+.sheet.open .sheet-backdrop{ opacity: 1; }
+.sheet.open .sheet-panel{ transform: translateY(0%); }
+
+.sheet-bar{
+  display:flex; align-items:center; gap:10px;
+  padding: 4px 2px 8px;
+}
+.sheet-bar .link{
+  background: transparent; border: 0; color: var(--ink); cursor: pointer; font-weight: 700;
+}
+html[data-theme="light"] .sheet-bar .link{ color: #0b1220; }
+
+.sheet-title{
+  margin-left: auto; margin-right: auto;
+  font-weight: 700; opacity: .9;
+}
+#qaDone{ margin-left: auto; }
+
+/* Eingabe */
+.sheet-body{
+  padding: 6px 2px 4px;
+}
+#qaInput{
+  width: 100%;
+  border: 0;
+  outline: none;
+  border-bottom: 2px solid color-mix(in srgb, var(--ink) 25%, transparent);
+  background: transparent;
+  color: var(--ink);
+  font: 16px/1.3 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  padding: 12px 4px 10px;
+}
+#qaInput:focus{
+  border-bottom-color: var(--accent);
+}
+html[data-theme="light"] #qaInput{
+  color: #0b1220;
+  border-bottom-color: rgba(0,0,0,.18);
+}
+
+/* Swipe-Handle (unsichtbar – mehr Touch-Fläche) */
+#qaPanel::before{
+  content:"";
+  position:absolute; left:50%; transform: translateX(-50%);
+  top:6px; width: 38px; height:4px; border-radius:999px;
+  background: color-mix(in srgb, var(--ink) 22%, transparent);
+}
+
+/* Nur auf Mobile sichtbar */
+@media (min-width: 821px){
+  .sheet{ display: none !important; }
+}
