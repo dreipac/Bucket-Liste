@@ -537,6 +537,139 @@ function isMobile(){ return window.matchMedia(`(max-width: ${MOBILE_BP}px)`).mat
 function openMobileSidebar(){ document.body.classList.add("sb-open"); }
 function closeMobileSidebar(){ document.body.classList.remove("sb-open"); }
 function toggleMobileSidebar(){ document.body.classList.toggle("sb-open"); }
+// === Quick-Add Bottom Sheet (Mobile) ===
+const quickAdd   = document.getElementById('quickAdd');
+const qaPanel    = document.getElementById('qaPanel');
+const qaInput    = document.getElementById('qaInput');
+const qaDone     = document.getElementById('qaDone');
+const qaDetails  = document.getElementById('qaDetails');
+
+let _qaOpen = false;
+let _qaStartY = null, _qaDragging = false;
+
+function openQuickAddSheet(prefillTitle = ""){
+  if (!isMobile()) return openItemModal("create"); // Fallback Desktop
+  const list = getSelectedList();
+  if (!list){ alert("Bitte zuerst links eine Liste anlegen oder auswählen."); return; }
+  if (isArchiveList(list)){
+    showToast({ title: "Nicht möglich", subtitle: "Im Archiv können keine neuen Einträge erstellt werden." });
+    return;
+  }
+  qaInput.value = prefillTitle || "";
+  qaDone.disabled = !(qaInput.value.trim());
+  quickAdd.hidden = false;
+  requestAnimationFrame(()=>{
+    quickAdd.classList.add('open');
+    _qaOpen = true;
+    // Fokus ins Feld
+    setTimeout(()=> { qaInput?.focus(); try{
+      const v = qaInput.value; qaInput.setSelectionRange(v.length, v.length);
+    }catch(_){}} , 10);
+  });
+}
+
+function closeQuickAddSheet(){
+  if (!_qaOpen) return;
+  quickAdd.classList.remove('open');
+  // kleine Wartezeit für die Out-Animation
+  setTimeout(()=> { quickAdd.hidden = true; _qaOpen = false; addItemBtn?.focus(); }, 200);
+}
+
+function createQuickItem(title){
+  const list = getSelectedList();
+  if (!list){ return; }
+  const trimmed = (title || "").trim();
+  if (!trimmed){ return; }
+
+  const newId = uid();
+  list.items.unshift({
+    id: newId,
+    title: trimmed,
+    notes: "",
+    dueDate: "",
+    dueTime: "",
+    priority: "med",
+    createdAt: Date.now(),
+    done: false,
+    repeat: "none",
+    repeatEnd: "never",
+    repeatCount: null,
+    repeatUntil: "",
+    repeatLeft: null
+  });
+  lastAnimItemId = newId;
+  saveState();
+  renderItems();
+  showToast({ title: "Hinzugefügt", subtitle: "Eintrag erstellt." });
+}
+
+/* Input-Interaktionen */
+qaInput?.addEventListener('input', ()=>{
+  qaDone.disabled = !(qaInput.value.trim());
+});
+qaInput?.addEventListener('keydown', (e)=>{
+  if (e.key === 'Enter'){
+    e.preventDefault();
+    if (!qaDone.disabled){
+      createQuickItem(qaInput.value);
+      closeQuickAddSheet();
+    }
+  } else if (e.key === 'Escape'){
+    e.preventDefault();
+    closeQuickAddSheet();
+  }
+});
+
+/* Buttons */
+qaDone?.addEventListener('click', ()=>{
+  if (!qaDone.disabled){
+    createQuickItem(qaInput.value);
+    closeQuickAddSheet();
+  }
+});
+qaDetails?.addEventListener('click', ()=>{
+  // ins große Modal wechseln, Titel vorbefüllen
+  const t = qaInput.value;
+  closeQuickAddSheet();
+  // kurze Verzögerung, damit die Animation sauber ist
+  setTimeout(()=>{
+    openItemModal("create");
+    try{
+      fTitle.value = t;
+      const v = fTitle.value || "";
+      fTitle.focus(); fTitle.setSelectionRange(v.length, v.length);
+    }catch(_){}
+  }, 160);
+});
+
+/* Backdrop-Tap schließt */
+quickAdd?.addEventListener('click', (e)=>{
+  if (e.target?.hasAttribute?.('data-qa-close')) closeQuickAddSheet();
+});
+
+/* Swipe-Down zum Schließen (nur Panel) */
+qaPanel?.addEventListener('pointerdown', (e)=>{
+  _qaStartY = e.clientY; _qaDragging = true;
+});
+window.addEventListener('pointermove', (e)=>{
+  if (!_qaDragging || !_qaOpen) return;
+  const dy = e.clientY - _qaStartY;
+  // Panel subtil mitziehen (nur nach unten)
+  if (dy > 0){
+    qaPanel.style.transform = `translateY(${dy}px)`;
+    const back = quickAdd.querySelector('.sheet-backdrop');
+    if (back){ back.style.opacity = String(Math.max(0, 1 - dy/220)); }
+  }
+});
+window.addEventListener('pointerup', (e)=>{
+  if (!_qaDragging) return;
+  const dy = e.clientY - _qaStartY;
+  _qaDragging = false;
+  qaPanel.style.transform = '';
+  const back = quickAdd?.querySelector('.sheet-backdrop'); if (back) back.style.opacity = '';
+  if (dy > 60){ closeQuickAddSheet(); }
+});
+
 
 // Backdrop-Klick (global) schließt Sidebar auf Mobile
 document.addEventListener("click", (e)=>{
@@ -1289,6 +1422,7 @@ function sortItems(arr){
     return titleCmp();
   });
 }
+
 
 
 function renderItems(){
@@ -2087,6 +2221,86 @@ if (itemForm) itemForm.addEventListener("keydown", (e)=>{
   }
 });
 
+// === Mobile: Filter-Dropdown ===
+const filtersToggleBtn = document.getElementById('filtersToggleBtn');
+if (filtersToggleBtn && !filtersToggleBtn._wired){
+  filtersToggleBtn.addEventListener('click', (e)=>{
+    e.preventDefault();
+    const panel = document.querySelector('.filters');
+    if (!panel) return;
+
+    const isOpen = panel.classList.contains('open');
+
+    // ARIA für Screenreader
+    filtersToggleBtn.setAttribute('aria-expanded', String(!isOpen));
+
+    // „auto height“ Transition Trick:
+    // 1) aktuelle Höhe messen
+    const startH = panel.scrollHeight;
+
+    if (!isOpen){
+      // Öffnen:
+      // Erst temporär öffnen, um die Zielhöhe zu erhalten
+      panel.classList.add('open');
+      // kurz warten bis Layout berechnet ist
+      requestAnimationFrame(()=>{
+        const targetH = panel.scrollHeight;
+        // zurück auf 0 und dann animiert auf targetH
+        panel.style.maxHeight = '0px';
+        requestAnimationFrame(()=>{
+          panel.style.maxHeight = targetH + 'px';
+        });
+      });
+
+      // nach Ende aufräumen
+      panel.addEventListener('transitionend', function onEnd(ev){
+        if (ev.propertyName === 'max-height'){
+          panel.style.maxHeight = ''; // zurück auf CSS (flexibel bei Inhalt)
+          panel.removeEventListener('transitionend', onEnd);
+        }
+      });
+    } else {
+      // Schließen:
+      const targetH = panel.scrollHeight;      // aktuelle offene Höhe
+      panel.style.maxHeight = targetH + 'px';  // fixieren
+      requestAnimationFrame(()=>{
+        panel.style.maxHeight = '0px';         // animiert zu
+        panel.classList.remove('open');
+      });
+
+      panel.addEventListener('transitionend', function onEnd(ev){
+        if (ev.propertyName === 'max-height'){
+          panel.style.maxHeight = '';
+          panel.removeEventListener('transitionend', onEnd);
+        }
+      });
+    }
+  });
+
+  // Initial-ARIA
+  filtersToggleBtn.setAttribute('aria-controls', 'filtersPanel');
+  filtersToggleBtn.setAttribute('aria-expanded', 'false');
+  filtersToggleBtn._wired = true;
+}
+
+// Gib dem Panel optional eine ID für aria-controls:
+const filtersPanelEl = document.querySelector('.filters');
+if (filtersPanelEl && !filtersPanelEl.id){
+  filtersPanelEl.id = 'filtersPanel';
+}
+
+
+
+
+// Optional: bei Klick außerhalb das Panel schließen
+document.addEventListener('click', (e)=>{
+  const panel = document.querySelector('.filters');
+  if (!panel || !panel.classList.contains('open')) return;
+  const insideBtn = e.target.closest?.('#filtersToggleBtn');
+  const insidePanel = e.target.closest?.('.filters');
+  if (!insideBtn && !insidePanel) panel.classList.remove('open');
+});
+
 // ===== Settings (Topbar & Drawer) =====
 function showSettingsModal(){
   if (opacityRange) { opacityRange.value = String(prefs.glassAlphaStrong.toFixed(2)); opacityValue.textContent = prefs.glassAlphaStrong.toFixed(2); }
@@ -2292,8 +2506,13 @@ if (addListBtn) addListBtn.addEventListener("click", ()=>{
 
 if (addItemBtn) addItemBtn.addEventListener("click", ()=>{
   if (!getSelectedList()){ alert("Bitte zuerst links eine Liste anlegen oder auswählen."); return; }
-  openItemModal("create");
+  if (isMobile()){
+    openQuickAddSheet();
+  } else {
+    openItemModal("create");
+  }
 });
+
 
 // Suche & Filter triggern Re-Render
 [searchInput, sortBy, statusFilter, dueFilter, prioFilter].forEach(el => {
