@@ -2154,7 +2154,6 @@ input,
     backdrop-filter: none;     /* Glas-Effekt deaktivieren */
     z-index: 100;
     padding: 10px 14px;
-    padding: calc(10px + env(safe-area-inset-top)) 14px 10px;
   }
   .topbar h1{ font-size: 18px; }
 }
@@ -2299,5 +2298,4 @@ html[data-theme="light"] #qaInput{
   .sheet{ display: none !important; }
 }
 
-html, body { background-color: #101317; }
-body { padding-top: env(safe-area-inset-top); }
+
